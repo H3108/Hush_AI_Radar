@@ -1,0 +1,68 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --bg-obsidian: #0b0d10;
+    --bg-surface: #12151b;
+    --bg-card: #161a22;
+    --border-graph: #1e232d;
+    --border-highlight: #2a313d;
+    --radar-green: #10b981;
+    --radar-green-glow: #00ff9d;
+    --pulse-blue: #3b82f6;
+    --code-cyan: #06b6d4;
+    --signal-amber: #f59e0b;
+    --signal-red: #ef4444;
+  }
+
+  body {
+    background-color: var(--bg-obsidian);
+    color: #f3f4f6;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    overflow-x: hidden;
+  }
+}
+
+/* Custom Terminal Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0b0d10;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1e232d;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #2b3240;
+}
+
+/* Monospace font utility for terminal numbers */
+.font-mono-code {
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+/* Radar Scan line pulse keyframe */
+@keyframes radar-pulse {
+  0% {
+    opacity: 0.3;
+    transform: scale(0.98);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.02);
+  }
+  100% {
+    opacity: 0.3;
+    transform: scale(0.98);
+  }
+}
+
+.animate-radar-pulse {
+  animation: radar-pulse 2s infinite ease-in-out;
+}
