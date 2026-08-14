@@ -112,7 +112,7 @@ export const Header: React.FC<HeaderProps> = ({
         setShowPanel(false);
         inputRef.current?.blur();
         setIsFocused(false);
-        onNavigate(r.tab, r.kind === 'signal' ? r.label.split(' ')[0] : searchTerm);
+          onNavigate(r.tab, r.kind === 'signal' ? r.label : searchTerm);
       }
     }
   };
@@ -126,7 +126,7 @@ export const Header: React.FC<HeaderProps> = ({
           setShowPanel(false);
           inputRef.current?.blur();
           setIsFocused(false);
-          onNavigate(r.tab, r.kind === 'signal' ? r.label.split(' ')[0] : searchTerm);
+        onNavigate(r.tab, r.kind === 'signal' ? r.label : searchTerm);
         }}
         className={`w-full text-left px-3 py-2 flex items-center justify-between gap-3 transition-colors cursor-pointer ${active ? 'bg-[#10B981]/15' : 'hover:bg-[#1A202C]'}`}
       >

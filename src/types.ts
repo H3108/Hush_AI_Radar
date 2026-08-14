@@ -60,6 +60,7 @@ export interface Source {
   status: 'active' | 'degraded' | 'failing';
   error_count: number;
   total_signals_ingested: number;
+  last_latency_ms?: number;       // B11: last RSS fetch latency in ms
 }
 
 export interface DailyBriefSection {

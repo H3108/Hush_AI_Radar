@@ -14,7 +14,9 @@ import {
   logSyncRun,
   saveDailyBrief,
   saveEmbedding,
-  saveToDiskPublic
+  saveToDiskPublic,
+  updateSourceHealth,
+  upsertModelPaper
 } from './db';
 import { analyzeRawSignal, cosineSimilarity, embedText, isoWeekKey, synthesizeDailyBrief, synthesizePeriodicBrief } from './gemini';
 
@@ -67,6 +69,28 @@ export function hashUrl(url: string): string {
   return crypto.createHash('md5').update(url.toLowerCase().trim()).digest('hex').slice(0, 16);
 }
 
+/* B14: semantic (cosine) title deduplication threshold */
+const SEMANTIC_DUP_THRESHOLD = 0.92;
+
+/**
+ * B14: beyond URL-MD5 hashing, embeds the candidate title and compares it
+ * against the embeddings of recent approved signals. Signals that already
+ * exist semantically (near-duplicate title, different URL) are skipped.
+ * Gracefully no-ops when the embedding API is unavailable (fallback mode).
+ */
+async function isSemanticDuplicate(
+  rawTitle: string,
+  recentEmbeddings: Map<string, { title: string; embedding: number[] }>
+): Promise<boolean> {
+  if (recentEmbeddings.size === 0) return false;
+  const emb = await embedText(rawTitle.slice(0, 500), `dedup:${rawTitle.slice(0, 40)}`);
+  if (!emb || emb.length === 0) return false;
+  for (const { embedding } of recentEmbeddings.values()) {
+    if (cosineSimilarity(emb, embedding) >= SEMANTIC_DUP_THRESHOLD) return true;
+  }
+  return false;
+}
+
 /**
  * Calculates the multi-factor Radar Heat Score (0.0 - 100.0)
  * Formula: (SourceAuth * 0.40) + (Freshness * 0.25) + (AIImpact * 0.25) + (Community * 0.10)
@@ -98,6 +122,17 @@ export function calculateRadarScore(
   };
 }
 
+export interface RadarScanResult {
+  sourcesChecked: number;
+  newSignalsIngested: number;
+  pendingReviewCount: number;
+  clustersUpdated: number;
+  status: 'success' | 'partial' | 'error';
+  message: string;
+}
+
+let scanInProgress = false;
+
 /**
  * Main Automated Pipeline Scan Execution
  *
@@ -105,31 +140,79 @@ export function calculateRadarScore(
  *   - Deduplication now uses one batched IN(...) query instead of two full-table
  *     scans per item (was O(n²), now O(log n) per scan).
  *   - Cluster linking runs after ingestion over the full approved set.
+ *
+ * Concurrency: startup sync (server.ts), the 15-minute daemon, and manual
+ * /api/admin/sync all call this. sql.js keeps the shared in-memory DB coherent
+ * (its ops are synchronous), but overlapping scans would duplicate Gemini API
+ * spend, double RSS fetches, and write duplicated sync_logs — so a running
+ * scan wins and concurrent callers skip.
  */
-export async function executeRadarPipelineScan(): Promise<{
-  sourcesChecked: number;
-  newSignalsIngested: number;
-  pendingReviewCount: number;
-  clustersUpdated: number;
-  status: 'success' | 'partial' | 'error';
-  message: string;
-}> {
+export async function executeRadarPipelineScan(): Promise<RadarScanResult> {
+  if (scanInProgress) {
+    addPipelineLog('warn', '[Pipeline Scan] Skipped: another radar scan is already in progress.');
+    return {
+      sourcesChecked: 0,
+      newSignalsIngested: 0,
+      pendingReviewCount: 0,
+      clustersUpdated: 0,
+      status: 'success',
+      message: 'Radar scan skipped: another scan is already running.'
+    };
+  }
+  scanInProgress = true;
+  try {
+    return await performRadarScan();
+  } finally {
+    scanInProgress = false;
+  }
+}
+
+async function performRadarScan(): Promise<RadarScanResult> {
   addPipelineLog('info', '[Pipeline Scan] Initiating automated radar scan across curated sources...');
   let newSignalsCount = 0;
   let pendingCount = 0;
   let sourcesChecked = 0;
+  let sourcesFailed = 0;
   const ingestedSignalIds: string[] = [];
 
-  const sourcesToScan = CURATED_SOURCES.slice(0, 8);
+  // A13: scan the FULL curated source set (18), not just the first 8.
+  const sourcesToScan = CURATED_SOURCES;
+
+  // B14: cache recent approved signal embeddings once for semantic title dedup.
+  const recentEmbMap = new Map<string, { title: string; embedding: number[] }>();
+  try {
+    const recentSignals = await getSignals({ reviewStatus: 'approved', limit: 100 });
+    const recentEmbeddings = await getEmbeddings(recentSignals.map((s) => s.id));
+    for (const sig of recentSignals) {
+      const emb = recentEmbeddings.get(sig.id);
+      if (emb && emb.length > 0) recentEmbMap.set(sig.id, { title: sig.title_zh || sig.title_raw, embedding: emb });
+    }
+  } catch (embErr: any) {
+    addPipelineLog('warn', `[Dedup] Semantic cache load skipped: ${embErr?.message || embErr}`);
+  }
 
   for (const source of sourcesToScan) {
     sourcesChecked++;
+    const fetchStartedAt = new Date().toISOString();
     try {
-      if (!source.rss_url) continue;
+      if (!source.rss_url) {
+        addPipelineLog('warn', `[RSS Warning] Source "${source.name}" has no rss_url configured.`);
+        sourcesFailed++;
+        await updateSourceHealth({
+          id: source.id,
+          status: 'failing',
+          lastFetchedAt: fetchStartedAt,
+          errorCount: (source.error_count || 0) + 1,
+          totalSignalsIngested: source.total_signals_ingested || 0
+        });
+        continue;
+      }
 
       addPipelineLog('info', `[RSS Fetch] Checking feed: ${source.name} (${source.category})`);
+      const fetchStartedMs = Date.now();
       const feed = await rssParser.parseURL(source.rss_url);
-      const items = feed.items ? feed.items.slice(0, 3) : [];
+      const fetchLatencyMs = Date.now() - fetchStartedMs;
+      const items = feed.items ? feed.items.slice(0, 5) : [];
 
       // Pre-compute candidate IDs from this feed and ask the DB in one query which
       // ones already exist. This collapses the previous N+1 dedupe pattern.
@@ -141,64 +224,114 @@ export async function executeRadarPipelineScan(): Promise<{
         })
         .filter((c): c is { item: any; rawUrl: string; signalId: string } => c !== null);
 
-      if (candidates.length === 0) continue;
+      let sourceIngested = 0;
+      if (candidates.length > 0) {
+        const existingIds = await getExistingSignalIds(candidates.map((c) => c.signalId));
 
-      const existingIds = await getExistingSignalIds(candidates.map((c) => c.signalId));
+        for (const { item, rawUrl, signalId } of candidates) {
+          if (existingIds.has(signalId)) continue;
 
-      for (const { item, rawUrl, signalId } of candidates) {
-        if (existingIds.has(signalId)) continue;
+          const rawTitle = item.title || 'Untitled Signal';
 
-        const rawTitle = item.title || 'Untitled Signal';
-        const rawSnippet = item.contentSnippet || item.content || item.summary || '';
-        const pubTime = item.isoDate || item.pubDate
-          ? new Date(item.isoDate || item.pubDate!).toISOString()
-          : new Date().toISOString();
+          // B14: semantic dedup — skip when the title is a near-duplicate of an
+          // already-approved signal even though the URL differs.
+          if (await isSemanticDuplicate(rawTitle, recentEmbMap)) {
+            addPipelineLog('info', `[Dedup] Skipped semantically similar title from "${source.name}": ${rawTitle.slice(0, 50)}...`);
+            continue;
+          }
 
-        addPipelineLog('gemini', `[AI Analysis] Scoring new signal from "${source.name}": ${rawTitle.slice(0, 50)}...`);
-        const analysis = await analyzeRawSignal(rawTitle, rawSnippet, source.name);
-        const { totalScore, breakdown } = calculateRadarScore(source.authority_weight, pubTime, analysis.ai_impact_score);
+          const rawSnippet = item.contentSnippet || item.content || item.summary || '';
+          const pubTime = item.isoDate || item.pubDate
+            ? new Date(item.isoDate || item.pubDate!).toISOString()
+            : new Date().toISOString();
 
-        const isPending = analysis.confidence_score < 65 || analysis.review_needed;
-        const reviewStatus = isPending ? 'pending_review' : 'approved';
-        const reviewReason = isPending
-          ? (analysis.review_reason || `Agent Confidence Score (${analysis.confidence_score}%) is below 65% quality threshold.`)
-          : undefined;
+          addPipelineLog('gemini', `[AI Analysis] Scoring new signal from "${source.name}": ${rawTitle.slice(0, 50)}...`);
+          const analysis = await analyzeRawSignal(rawTitle, rawSnippet, source.name);
+          const { totalScore, breakdown } = calculateRadarScore(source.authority_weight, pubTime, analysis.ai_impact_score);
 
-        if (isPending) pendingCount++;
+          const isPending = analysis.confidence_score < 65 || analysis.review_needed;
+          const reviewStatus = isPending ? 'pending_review' : 'approved';
+          const reviewReason = isPending
+            ? (analysis.review_reason || `Agent Confidence Score (${analysis.confidence_score}%) is below 65% quality threshold.`)
+            : undefined;
 
-        const newSignal: Signal = {
-          id: signalId,
-          title_raw: rawTitle,
-          title_zh: analysis.title_zh,
-          title_en: analysis.title_en,
-          original_url: rawUrl,
-          summary_zh: analysis.summary_zh,
-          summary_en: analysis.summary_en,
-          source_id: source.id,
-          source_name: source.name,
-          category: source.category,
-          publish_time: pubTime,
-          radar_score: totalScore,
-          score_breakdown: breakdown,
-          confidence_score: analysis.confidence_score,
-          review_status: reviewStatus,
-          review_reason: reviewReason,
-          tags: analysis.tags,
-          raw_content: rawSnippet.slice(0, 300),
-          created_at: new Date().toISOString()
-        };
+          if (isPending) pendingCount++;
 
-        await insertSignal(newSignal);
-        newSignalsCount++;
-        ingestedSignalIds.push(signalId);
-        addPipelineLog('success', `[Ingested] Signal ${newSignal.id} stored (Score: ${totalScore}, Review: ${reviewStatus})`);
+          const newSignal: Signal = {
+            id: signalId,
+            title_raw: rawTitle,
+            title_zh: analysis.title_zh,
+            title_en: analysis.title_en,
+            original_url: rawUrl,
+            summary_zh: analysis.summary_zh,
+            summary_en: analysis.summary_en,
+            source_id: source.id,
+            source_name: source.name,
+            category: source.category,
+            publish_time: pubTime,
+            radar_score: totalScore,
+            score_breakdown: breakdown,
+            confidence_score: analysis.confidence_score,
+            review_status: reviewStatus,
+            review_reason: reviewReason,
+            tags: analysis.tags,
+            raw_content: rawSnippet.slice(0, 300),
+            created_at: new Date().toISOString()
+          };
+
+          await insertSignal(newSignal);
+          newSignalsCount++;
+          sourceIngested++;
+          ingestedSignalIds.push(signalId);
+          addPipelineLog('success', `[Ingested] Signal ${newSignal.id} stored (Score: ${totalScore}, Review: ${reviewStatus})`);
+        }
+      }
+
+      // A2: reflect the real outcome in the sources telemetry table.
+      await updateSourceHealth({
+        id: source.id,
+        status: 'active',
+        lastFetchedAt: fetchStartedAt,
+        errorCount: 0,
+        totalSignalsIngested: (source.total_signals_ingested || 0) + sourceIngested,
+        lastLatencyMs: fetchLatencyMs
+      });
+
+      // A4: curate high-value approved signals into the models_papers database
+      // so the model/paper library grows with real ingested signals.
+      try {
+        const highValue = await getSignals({ reviewStatus: 'approved', source_id: source.id, minScore: 85, limit: 3 });
+        for (const sig of highValue) {
+          await upsertModelPaper({
+            id: `mp-${sig.id}`,
+            name: (sig.title_zh || sig.title_raw).slice(0, 60),
+            type: sig.category === 'paper' ? 'paper' : 'model',
+            author_org: sig.source_name,
+            release_date: (sig.publish_time || '').slice(0, 10),
+            key_breakthrough: (sig.summary_zh || '').slice(0, 120),
+            benchmarks_or_stars: `Score ${sig.radar_score.toFixed(1)}`,
+            url: sig.original_url,
+            radar_score: sig.radar_score,
+            category: sig.category
+          });
+        }
+      } catch (curateErr: any) {
+        addPipelineLog('warn', `[Curate] models_papers upsert skipped for "${source.name}": ${curateErr?.message || curateErr}`);
       }
     } catch (err: any) {
+      sourcesFailed++;
+      await updateSourceHealth({
+        id: source.id,
+        status: sourcesFailed >= 3 ? 'failing' : 'degraded',
+        lastFetchedAt: fetchStartedAt,
+        errorCount: (source.error_count || 0) + 1,
+        totalSignalsIngested: source.total_signals_ingested || 0
+      }).catch(() => {});
       addPipelineLog('warn', `[RSS Warning] Source "${source.name}" fetch error: ${err?.message || err}`);
     }
   }
 
-  await logSyncRun(sourcesChecked, newSignalsCount, 'success', `Ingested ${newSignalsCount} new signals, ${pendingCount} routed to review queue.`);
+  await logSyncRun(sourcesChecked, newSignalsCount, sourcesFailed > 0 ? 'partial' : 'success', `Ingested ${newSignalsCount} new signals, ${pendingCount} routed to review queue, ${sourcesFailed} source(s) failed.`);
 
   // Semantic clustering pass — runs over newly-ingested + recent approved signals
   let clustersUpdated = 0;
@@ -210,15 +343,15 @@ export async function executeRadarPipelineScan(): Promise<{
 
   addPipelineLog(
     'success',
-    `[Pipeline Complete] Checked ${sourcesChecked} sources. Ingested ${newSignalsCount} new signals (${pendingCount} queued). Clusters updated: ${clustersUpdated}.`
+    `[Pipeline Complete] Checked ${sourcesChecked} sources (${sourcesFailed} failed). Ingested ${newSignalsCount} new signals (${pendingCount} queued). Clusters updated: ${clustersUpdated}.`
   );
   return {
     sourcesChecked,
     newSignalsIngested: newSignalsCount,
     pendingReviewCount: pendingCount,
     clustersUpdated,
-    status: 'success',
-    message: `Radar Scan Completed: Checked ${sourcesChecked} sources. Ingested ${newSignalsCount} new signals (${pendingCount} queued). ${clustersUpdated} clusters refreshed.`
+    status: sourcesFailed > 0 ? 'partial' : 'success',
+    message: `Radar Scan Completed: Checked ${sourcesChecked} sources. Ingested ${newSignalsCount} new signals (${pendingCount} queued). ${clustersUpdated} clusters refreshed.${sourcesFailed > 0 ? ` ${sourcesFailed} source(s) reported fetch errors.` : ''}`
   };
 }
 
@@ -341,8 +474,6 @@ async function runSemanticClustering(newSignalIds: string[]): Promise<number> {
     const scoreSum = g.members.reduce((acc, s) => acc + s.radar_score, 0);
     const hotScore = Math.round((scoreSum / g.members.length) * 10) / 10;
     const impactLevel = hotScore >= 90 ? 'CRITICAL' : hotScore >= 75 ? 'HIGH' : 'MEDIUM';
-    const memberTitles = g.members.map((m) => `• ${(m.title_zh || m.title_raw).slice(0, 80)}`).join('\n');
-    void memberTitles; // Reserved for future cluster summary enrichment
     const summary = `基于语义相似度 (${(CLUSTER_SIMILARITY_THRESHOLD * 100).toFixed(0)}%+) 自动聚合 ${g.members.length} 条相关情报，主导信号：${(g.head.title_zh || g.head.title_raw).slice(0, 80)}。`;
     const memberIds = g.members.map((m) => m.id);
 

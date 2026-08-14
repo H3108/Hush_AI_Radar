@@ -1,16 +1,83 @@
-import React from 'react';
-import { Flame, Layers } from 'lucide-react';
-import { EventCluster } from '../types';
+import React, { useEffect } from 'react';
+import { Flame, Layers, MapPin } from 'lucide-react';
+import { EventCluster, Signal } from '../types';
 import { useLanguage } from '../i18n/LanguageContext';
 
 interface EventClustersViewProps {
   clusters: EventCluster[];
   isLoading: boolean;
   highlightId?: string | null;
+  signals?: Signal[];
 }
 
-export const EventClustersView: React.FC<EventClustersViewProps> = ({ clusters, isLoading, highlightId }) => {
+export const EventClustersView: React.FC<EventClustersViewProps> = ({ clusters, isLoading, highlightId, signals = [] }) => {
   const { language, t } = useLanguage();
+  const signalById = new Map(signals.map((s) => [s.id, s]));
+
+  // Scroll to the highlighted cluster once when the highlight target changes.
+  // (Previously an inline ref callback re-ran on every render, re-scrolling
+  // while highlightId was set.)
+  useEffect(() => {
+    if (!highlightId) return;
+    document.getElementById(`cluster-${highlightId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [highlightId]);
+
+  // B7: spatio-temporal evolution helper — build a chronological timeline
+  // of a cluster's member signals with relative spacing.
+  const renderTimeline = (cluster: EventCluster) => {
+    const members = cluster.related_signal_ids
+      .map((id) => signalById.get(id))
+      .filter((s): s is Signal => !!s && !!s.publish_time)
+      .sort((a, b) => new Date(a.publish_time).getTime() - new Date(b.publish_time).getTime());
+
+    if (members.length < 2) return null;
+
+    const start = new Date(members[0].publish_time).getTime();
+    const end = new Date(members[members.length - 1].publish_time).getTime();
+    const span = Math.max(1, end - start);
+
+    return (
+      <div className="pt-3 border-t border-[#1E232D]">
+        <div className="flex items-center gap-1.5 text-[10px] font-mono-code text-[#6B7280] uppercase tracking-wider mb-2">
+          <MapPin className="w-3 h-3 text-[#3B82F6]" />
+          <span>时空演进 / Temporal Evolution</span>
+          <span className="ml-auto text-[#9CA3AF] normal-case">
+            {members.length} signals · {formatSpan(span)}
+          </span>
+        </div>
+
+        {/* Timeline bar with positioned nodes */}
+        <div className="relative h-2 bg-[#0B0D10] border border-[#1E232D] rounded-full mb-2">
+          {members.map((m) => {
+            const pos = ((new Date(m.publish_time).getTime() - start) / span) * 100;
+            return (
+              <div
+                key={m.id}
+                title={language === 'en' ? (m.title_en || m.title_raw) : m.title_zh}
+                className="absolute top-1/2 -translate-y-1/2 w-2 h-2 rounded-full border border-[#0B0D10] bg-[#10B981] cursor-pointer transition-transform hover:scale-150"
+                style={{ left: `calc(${pos}% )` }}
+              />
+            );
+          })}
+        </div>
+
+        {/* Earliest / latest markers */}
+        <div className="flex items-center justify-between text-[10px] font-mono-code text-[#6B7280]">
+          <span>↑ {new Date(members[0].publish_time).toLocaleString()}</span>
+          <span className="text-[#10B981]">●</span>
+          <span>↓ {new Date(members[members.length - 1].publish_time).toLocaleString()}</span>
+        </div>
+      </div>
+    );
+  };
+
+  const formatSpan = (ms: number) => {
+    const hrs = ms / 3600000;
+    if (hrs < 24) return `${Math.max(1, Math.round(hrs))}h span`;
+    const days = hrs / 24;
+    if (days < 30) return `${Math.round(days)}d span`;
+    return `${(days / 30).toFixed(1)}mo span`;
+  };
 
   return (
     <div className="flex-1 p-4 bg-[#0B0D10] space-y-4 overflow-y-auto max-h-[calc(100vh-140px)]">
@@ -54,7 +121,6 @@ export const EventClustersView: React.FC<EventClustersViewProps> = ({ clusters, 
                     ? 'border-[#10B981] shadow-[0_0_0_1px_#10B981,0_0_20px_rgba(16,185,129,0.15)]'
                     : 'border-[#1E232D] hover:border-[#3B82F6]/50'
                 }`}
-                ref={highlightId === cluster.id ? (el) => el?.scrollIntoView({ behavior: 'smooth', block: 'center' }) : undefined}
               >
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <div className="flex items-center gap-2">
@@ -86,6 +152,8 @@ export const EventClustersView: React.FC<EventClustersViewProps> = ({ clusters, 
                   <span>Grouped Sources: {cluster.related_signal_ids.length} Signals Consolidated</span>
                   <span>Updated: {new Date(cluster.updated_at).toLocaleTimeString()}</span>
                 </div>
+
+                {renderTimeline(cluster)}
               </div>
             );
           })}

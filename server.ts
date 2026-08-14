@@ -7,6 +7,9 @@ import { createAdminRouter } from './src/server/routes/admin';
 import { createApiV1Router } from './src/server/routes/apiv1';
 import { createPublicRouter } from './src/server/routes/public';
 import { executeRadarPipelineScan, generateDailyBriefIfStale, generatePeriodicBriefIfStale } from './src/server/pipeline';
+import { installProxyAwareFetch } from './src/server/proxy';
+
+installProxyAwareFetch();
 
 const PORT = Number(process.env.PORT) || 3000;
 const FIFTEEN_MINUTES_MS = 15 * 60 * 1000;

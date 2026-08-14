@@ -60,7 +60,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
   onReviewAction,
   isLoadingPending = false
 }) => {
-  const { language, t } = useLanguage();
+  const { t } = useLanguage();
 
   const [inputToken, setInputToken] = useState<string>('');
   const [sessionToken, setSessionToken] = useState<string>(() => {
@@ -75,6 +75,9 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
   const [statusData, setStatusData] = useState<AdminStatusData | null>(null);
   const [logs, setLogs] = useState<PipelineLogEntry[]>([]);
   const [isLoadingStatus, setIsLoadingStatus] = useState<boolean>(false);
+
+  // A5: real sync history from the sync_logs table
+  const [syncLogs, setSyncLogs] = useState<{ id: number; timestamp: string; sources_checked: number; new_signals: number; status: string; details: string | null }[]>([]);
 
   // Trigger states
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
@@ -186,9 +189,23 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
     }
   };
 
+  // Fetch sync history (read-only, public)
+  const fetchSyncLogs = async () => {
+    try {
+      const res = await fetch('/api/sync-logs?limit=15');
+      if (res.ok) {
+        const data = await res.json();
+        setSyncLogs(data.logs || []);
+      }
+    } catch (err) {
+      console.error('[Admin Console] Sync logs fetch error:', err);
+    }
+  };
+
   // Auto-verify session on mount
   useEffect(() => {
     checkAdminSession();
+    fetchSyncLogs();
   }, []);
 
   // Periodic polling for status & logs if authenticated
@@ -220,11 +237,12 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
     setSyncMessage(null);
     try {
       const res = await fetch('/api/admin/sync', getFetchOptions(sessionToken, { method: 'POST' }));
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
         setSyncMessage(`✅ ${data.message || 'Pipeline scan complete.'}`);
         await fetchAdminStatus();
         await fetchAdminLogs();
+        await fetchSyncLogs();
         if (onRefreshGlobalData) onRefreshGlobalData();
       } else {
         setSyncMessage(`❌ ${data.error || 'Sync failed.'}`);
@@ -245,7 +263,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
         method: 'POST',
         body: JSON.stringify({ lang: selectedBriefLang })
       }));
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (res.ok && data.brief) {
         setBriefMessage(`✅ Brief synthesized for [${selectedBriefLang}]: "${data.brief.headline}"`);
         await fetchAdminStatus();
@@ -267,12 +285,20 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
     setGeminiPingResult(null);
     try {
       const res = await fetch('/api/admin/gemini-ping', getFetchOptions(sessionToken, { method: 'POST' }));
-      const data = await res.json();
-      setGeminiPingResult({
-        status: data.status,
-        latencyMs: data.latencyMs || 0,
-        message: data.message || 'Ping complete.'
-      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setGeminiPingResult({
+          status: data.status || 'ERROR',
+          latencyMs: 0,
+          message: data.error || data.message || `Gemini ping failed (HTTP ${res.status}).`
+        });
+      } else {
+        setGeminiPingResult({
+          status: data.status,
+          latencyMs: data.latencyMs || 0,
+          message: data.message || 'Ping complete.'
+        });
+      }
     } catch (err: any) {
       setGeminiPingResult({
         status: 'ERROR',
@@ -394,6 +420,17 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
   const today = quota?.today;
   const todayTokens = (today?.inputTokens || 0) + (today?.outputTokens || 0);
 
+  // A3: derive source health from real source telemetry instead of hardcoded
+  // "18/18 HEALTHY" seed values.
+  const allSources = statusData?.sources || [];
+  const healthySources = allSources.filter((s) => s.status === 'active').length;
+  const degradedSources = allSources.filter((s) => s.status === 'degraded' || s.status === 'failing').length;
+  const healthyPct = allSources.length ? Math.round((healthySources / allSources.length) * 100) : 0;
+  const topAuthorityNames = [...allSources]
+    .sort((a, b) => b.authority_weight - a.authority_weight)
+    .slice(0, 3)
+    .map((s) => s.name);
+
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto w-full">
       {/* Top Header & Security Status */}
@@ -413,7 +450,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
               </span>
             </div>
             <p className="text-xs font-mono-code text-[#6B7280] mt-0.5">
-              Personal Maintenance Dashboard · Daemon Task: 15m Automated Scan Loop
+              Personal Maintenance Dashboard · Daemon Task: {system?.daemonInterval || '15m'} Automated Scan Loop
             </p>
           </div>
         </div>
@@ -551,7 +588,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
               </div>
               <div className="flex justify-between border-b border-[#1E232D] pb-1">
                 <span className="text-[#6B7280]">Daemon Loop:</span>
-                <span className="text-[#10B981] font-semibold">15 Min Interval</span>
+                <span className="text-[#10B981] font-semibold">{system?.daemonInterval || '15 Min Interval'}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-[#6B7280]">Runtime:</span>
@@ -568,17 +605,19 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                 数据源健康状态
               </span>
               <span className="px-1.5 py-0.5 rounded text-[10px] bg-[#3B82F6]/15 text-[#3B82F6] font-bold">
-                18/18 HEALTHY
+                {allSources.length ? `${healthySources}/${allSources.length} HEALTHY` : '---'}
               </span>
             </div>
             <div className="space-y-1.5 text-xs font-mono-code">
               <div className="flex justify-between border-b border-[#1E232D] pb-1">
                 <span className="text-[#6B7280]">Total Curated Sources:</span>
-                <span className="text-white font-semibold">18 Active Feeds</span>
+                <span className="text-white font-semibold">{allSources.length} Active Feeds</span>
               </div>
               <div className="flex justify-between border-b border-[#1E232D] pb-1">
-                <span className="text-[#6B7280]">Degraded Sources:</span>
-                <span className="text-[#10B981] font-semibold">0 (100% Online)</span>
+                <span className="text-[#6B7280]">Degraded/Failing Sources:</span>
+                <span className={`font-semibold ${degradedSources > 0 ? 'text-[#F59E0B]' : 'text-[#10B981]'}`}>
+                  {degradedSources} ({healthyPct}% Online)
+                </span>
               </div>
               <div className="flex justify-between border-b border-[#1E232D] pb-1">
                 <span className="text-[#6B7280]">Fetch Mode:</span>
@@ -586,7 +625,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
               </div>
               <div className="flex justify-between">
                 <span className="text-[#6B7280]">Top Authority:</span>
-                <span className="text-[#F59E0B]">OpenAI, ArXiv, DeepSeek</span>
+                <span className="text-[#F59E0B]">{topAuthorityNames.length ? topAuthorityNames.join(', ') : 'OpenAI, ArXiv, DeepSeek'}</span>
               </div>
             </div>
           </div>
@@ -718,9 +757,9 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
           <div className="flex items-center justify-between border-b border-[#1E232D] pb-2">
             <h3 className="text-xs font-mono-code text-[#6B7280] font-bold uppercase tracking-wider flex items-center gap-2">
               <Database className="w-4 h-4 text-[#3B82F6]" />
-              <span>DATA SOURCES TELEMETRY // 数据源健康列表 (18 SOURCES)</span>
+              <span>DATA SOURCES TELEMETRY // 数据源健康列表 ({allSources.length} SOURCES)</span>
             </h3>
-            <span className="text-xs font-mono-code text-[#10B981]">100% HEALTHY</span>
+            <span className={`text-xs font-mono-code ${healthyPct === 100 ? 'text-[#10B981]' : healthyPct >= 80 ? 'text-[#F59E0B]' : 'text-[#EF4444]'}`}>{healthyPct}% HEALTHY</span>
           </div>
 
           <div className="overflow-x-auto">
@@ -731,26 +770,40 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                   <th className="py-2 px-3">Source Name</th>
                   <th className="py-2 px-3">Category</th>
                   <th className="py-2 px-3 text-center">Auth Weight</th>
+                  <th className="py-2 px-3">Last Fetched</th>
+                  <th className="py-2 px-3">Errors</th>
+                  <th className="py-2 px-3">Signals</th>
                   <th className="py-2 px-3">RSS Feed URL</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#1E232D]/60 text-[#D1D5DB]">
-                {(statusData?.sources || []).map((src) => (
-                  <tr key={src.id} className="hover:bg-[#1A202C]/50 transition-colors">
-                    <td className="py-2 px-3">
-                      <span className="inline-flex items-center gap-1 text-[10px] text-[#10B981] font-bold">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-[#10B981]" />
-                        HEALTHY
-                      </span>
-                    </td>
-                    <td className="py-2 px-3 text-white font-semibold">{src.name}</td>
-                    <td className="py-2 px-3 text-[#9CA3AF]">{src.category}</td>
-                    <td className="py-2 px-3 text-center font-bold text-[#F59E0B]">
-                      {src.authority_weight}x
-                    </td>
-                    <td className="py-2 px-3 text-[#6B7280] truncate max-w-xs">{src.rss_url}</td>
-                  </tr>
-                ))}
+                {allSources.map((src) => {
+                  const statusMeta: Record<string, { label: string; cls: string }> = {
+                    active: { label: 'HEALTHY', cls: 'text-[#10B981] bg-[#10B981]/10 border-[#10B981]/30' },
+                    degraded: { label: 'DEGRADED', cls: 'text-[#F59E0B] bg-[#F59E0B]/10 border-[#F59E0B]/30' },
+                    failing: { label: 'FAILING', cls: 'text-[#EF4444] bg-[#EF4444]/10 border-[#EF4444]/30' }
+                  };
+                  const meta = statusMeta[src.status] || statusMeta.active;
+                  return (
+                    <tr key={src.id} className="hover:bg-[#1A202C]/50 transition-colors">
+                      <td className="py-2 px-3">
+                        <span className={`inline-flex items-center gap-1 text-[10px] font-bold border rounded px-1.5 py-0.5 ${meta.cls}`}>
+                          <CheckCircle2 className="w-3 h-3" />
+                          {meta.label}
+                        </span>
+                      </td>
+                      <td className="py-2 px-3 text-white font-semibold">{src.name}</td>
+                      <td className="py-2 px-3 text-[#9CA3AF]">{src.category}</td>
+                      <td className="py-2 px-3 text-center font-bold text-[#F59E0B]">
+                        {src.authority_weight}x
+                      </td>
+                      <td className="py-2 px-3 text-[#9CA3AF]">{src.last_fetched_at ? new Date(src.last_fetched_at).toLocaleTimeString() : 'Never'}</td>
+                      <td className="py-2 px-3 text-center font-bold text-[#EF4444]">{src.error_count || 0}</td>
+                      <td className="py-2 px-3 text-center text-[#10B981] font-bold">{src.total_signals_ingested || 0}</td>
+                      <td className="py-2 px-3 text-[#6B7280] truncate max-w-xs">{src.rss_url}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -777,7 +830,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                   <span className="text-[10px] font-mono-code text-[#6B7280]">POST /api/admin/sync</span>
                 </div>
                 <p className="text-xs text-[#9CA3AF] leading-relaxed">
-                  Immediately trigger full pipeline RSS ingest across top 18 sources, execute MD5 deduplication, and score AI impact via Gemini.
+                  Immediately trigger full pipeline RSS ingest across top {allSources.length} sources, execute MD5 deduplication, and score AI impact via Gemini.
                 </p>
               </div>
 
@@ -808,7 +861,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                   <span className="text-[10px] font-mono-code text-[#6B7280]">POST /api/admin/generate-brief</span>
                 </div>
                 <p className="text-xs text-[#9CA3AF] leading-relaxed">
-                  Invoke Gemini 3.6 Flash to synthesize high-impact signals into structured Executive Daily Brief.
+                  Invoke {gemini?.model || 'Gemini'} to synthesize high-impact signals into structured Executive Daily Brief.
                 </p>
               </div>
 
@@ -853,6 +906,56 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                 <span>{isGeneratingBrief ? 'SYNTHESIZING DAILY BRIEF...' : 'SYNTHESIZE DAILY BRIEF'}</span>
               </button>
             </div>
+          </div>
+
+          {/* Sync History Table (A5: real data from sync_logs) */}
+          <div className="bg-[#0B0D10] border border-[#1E232D] rounded overflow-x-auto">
+            <div className="p-3 border-b border-[#1E232D] font-mono-code text-xs text-white font-bold flex items-center justify-between">
+              <span>SYNC HISTORY // 同步历史 (sync_logs)</span>
+              <button
+                onClick={fetchSyncLogs}
+                className="text-[10px] text-[#9CA3AF] hover:text-white flex items-center gap-1 cursor-pointer"
+              >
+                <RefreshCw className="w-3 h-3" />
+                REFRESH
+              </button>
+            </div>
+            <table className="w-full text-left text-xs font-mono-code">
+              <thead>
+                <tr className="border-b border-[#1E232D] text-[#6B7280] uppercase tracking-wider text-[10px]">
+                  <th className="py-2 px-3">Time</th>
+                  <th className="py-2 px-3 text-center">Status</th>
+                  <th className="py-2 px-3 text-center">Sources</th>
+                  <th className="py-2 px-3 text-center">New Signals</th>
+                  <th className="py-2 px-3">Details</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#1E232D]/60 text-[#D1D5DB]">
+                {syncLogs.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="py-4 text-center text-[#6B7280] italic">No sync runs recorded yet.</td>
+                  </tr>
+                ) : syncLogs.map((log) => (
+                  <tr key={log.id} className="hover:bg-[#1A202C]/50 transition-colors">
+                    <td className="py-2 px-3 text-[#9CA3AF]">{new Date(log.timestamp).toLocaleString()}</td>
+                    <td className="py-2 px-3 text-center">
+                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${
+                        log.status === 'success'
+                          ? 'bg-[#10B981]/10 text-[#10B981] border-[#10B981]/30'
+                          : log.status === 'partial'
+                          ? 'bg-[#F59E0B]/10 text-[#F59E0B] border-[#F59E0B]/30'
+                          : 'bg-[#EF4444]/10 text-[#EF4444] border-[#EF4444]/30'
+                      }`}>
+                        {log.status.toUpperCase()}
+                      </span>
+                    </td>
+                    <td className="py-2 px-3 text-center text-white font-semibold">{log.sources_checked}</td>
+                    <td className="py-2 px-3 text-center text-[#10B981] font-semibold">{log.new_signals}</td>
+                    <td className="py-2 px-3 text-[#6B7280] truncate max-w-md">{log.details || '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}

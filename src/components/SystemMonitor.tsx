@@ -1,16 +1,20 @@
 import React from 'react';
-import { Activity, CheckCircle, Clock, Database, Lock, Radio, ShieldCheck } from 'lucide-react';
+import { Activity, CheckCircle, Clock, Database, Loader2, Lock, Radio, RefreshCw, ShieldCheck } from 'lucide-react';
 import { Source, SystemStats } from '../types';
 import { useLanguage } from '../i18n/LanguageContext';
 
 interface SystemMonitorProps {
   stats: SystemStats | null;
   sources: Source[];
+  onTriggerSync?: () => Promise<void>;
+  isSyncing?: boolean;
 }
 
 export const SystemMonitor: React.FC<SystemMonitorProps> = ({
   stats,
-  sources
+  sources,
+  onTriggerSync,
+  isSyncing = false
 }) => {
   const { t } = useLanguage();
 
@@ -53,10 +57,23 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
           </p>
         </div>
 
-        {/* Public View Only Badge */}
-        <div className="flex items-center gap-2 px-3 py-1.5 bg-[#1E232D] text-[#9CA3AF] border border-[#2B3545] rounded font-mono-code text-xs font-semibold self-start sm:self-auto">
-          <Lock className="w-3.5 h-3.5 text-[#F59E0B]" />
-          <span>{t.publicReadonlyNotice}</span>
+        {/* Public View Only Badge + Manual Sync */}
+        <div className="flex items-center gap-2 flex-wrap self-start sm:self-auto">
+          {onTriggerSync && (
+            <button
+              onClick={() => onTriggerSync()}
+              disabled={isSyncing}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#10B981]/15 hover:bg-[#10B981]/30 disabled:opacity-50 text-[#10B981] border border-[#10B981]/40 rounded font-mono-code text-xs font-bold transition-all cursor-pointer"
+              title="POST /api/admin/sync"
+            >
+              {isSyncing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+              <span>{isSyncing ? 'SYNCING...' : t.triggerManualSync || 'MANUAL SYNC'}</span>
+            </button>
+          )}
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-[#1E232D] text-[#9CA3AF] border border-[#2B3545] rounded font-mono-code text-xs font-semibold">
+            <Lock className="w-3.5 h-3.5 text-[#F59E0B]" />
+            <span>{t.publicReadonlyNotice}</span>
+          </div>
         </div>
       </div>
 
@@ -141,6 +158,7 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
               <th className="p-3">CATEGORY</th>
               <th className="p-3">AUTHORITY WEIGHT</th>
               <th className="p-3">SIGNALS INGESTED</th>
+              <th className="p-3">LATENCY</th>
               <th className="p-3">STATUS</th>
             </tr>
           </thead>
@@ -158,6 +176,15 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
                 </td>
                 <td className="p-3 text-[#F59E0B] font-bold">{s.authority_weight.toFixed(1)} / 5.0</td>
                 <td className="p-3 text-[#10B981] font-bold">{s.total_signals_ingested}</td>
+                <td className="p-3">
+                  {s.last_latency_ms !== undefined && s.last_latency_ms !== null ? (
+                    <span className={s.last_latency_ms < 1500 ? 'text-[#10B981]' : s.last_latency_ms < 5000 ? 'text-[#F59E0B]' : 'text-[#EF4444]'}>
+                      {s.last_latency_ms}ms
+                    </span>
+                  ) : (
+                    <span className="text-[#4B5563]">--</span>
+                  )}
+                </td>
                 <td className="p-3">
                   <span className={`inline-flex items-center gap-1 px-2 py-0.5 border rounded text-[10px] font-bold ${statusMeta[s.status]?.cls || statusMeta.active.cls}`}>
                     {statusMeta[s.status]?.icon || <CheckCircle className="w-3 h-3" />}

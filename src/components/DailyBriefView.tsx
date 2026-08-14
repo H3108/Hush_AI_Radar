@@ -82,9 +82,11 @@ export const InsightsView: React.FC<InsightsViewProps> = ({
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `Hush_AI_Radar_Report_${currentTab}_${displayBrief.date || '2026'}.md`;
+    a.download = `Hush_AI_Radar_Report_${currentTab}_${displayBrief.date || new Date().getFullYear()}.md`;
+    document.body.appendChild(a);
     a.click();
-    URL.revokeObjectURL(url);
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
   const periodTitle =
@@ -221,7 +223,7 @@ export const InsightsView: React.FC<InsightsViewProps> = ({
       {/* Brief Content (shared renderer for daily / weekly / monthly) */}
       {!displayBrief ? (
         <div className="p-12 text-center font-mono-code text-xs text-[#6B7280] bg-[#12151B] border border-[#1E232D] rounded space-y-2">
-          <div>{isGenerating ? (t.generatingBrief || '正在生成简报...') : (currentTab === 'daily' ? t.noSignalsFound : '该周期简报尚未生成，点击「重新生成」或等待定时任务（周报：每周日 23:55 UTC / 月报：每月 1 日 23:55 UTC）自动生成。')}</div>
+          <div>{isGenerating ? (t.generatingBrief || '正在生成简报...') : (currentTab === 'daily' ? t.noSignalsFound : t.periodicEmptyHint)}</div>
         </div>
       ) : (
         <div className="bg-[#12151B] border border-[#1E232D] rounded p-6 space-y-6">
@@ -288,5 +290,3 @@ export const InsightsView: React.FC<InsightsViewProps> = ({
     </div>
   );
 };
-
-export const DailyBriefView = InsightsView;

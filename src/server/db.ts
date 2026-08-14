@@ -190,6 +190,7 @@ function initSchema(database: Database) {
   try { database.run(`ALTER TABLE event_clusters ADD COLUMN summary_en TEXT;`); } catch (_) {}
   try { database.run(`ALTER TABLE daily_briefs ADD COLUMN language TEXT DEFAULT 'zh-CN';`); } catch (_) {}
   try { database.run(`ALTER TABLE daily_briefs ADD COLUMN brief_type TEXT DEFAULT 'daily';`); } catch (_) {}
+  try { database.run(`ALTER TABLE sources ADD COLUMN last_latency_ms INTEGER DEFAULT 0;`); } catch (_) {}
 }
 
 /**
@@ -561,7 +562,7 @@ function seedInitialData(database: Database) {
    - **来源**: ArXiv cs.AI | [原文直达](https://arxiv.org/abs/2502.09988)
 
 ---
-*Generated automatically by Hush AI Radar Pipeline Engine with Gemini 3.6 Flash.*
+*Generated automatically by Hush AI Radar Pipeline Engine with gemini-3.1-flash-lite.*
 `,
     generated_at: now
   };
@@ -652,12 +653,17 @@ export async function getSystemStats(): Promise<SystemStats> {
   const sourcesTotalRes = database.exec('SELECT COUNT(*) FROM sources');
   const sourcesTotal = sourcesTotalRes[0]?.values[0]?.[0] as number || 0;
 
+  // A1: last_sync_time is derived from the real sync_logs table instead of a
+  // hardcoded "now", so "最近同步" reflects the last actual pipeline run.
+  const lastSyncRes = database.exec('SELECT timestamp FROM sync_logs ORDER BY timestamp DESC LIMIT 1');
+  const lastSyncTime = (lastSyncRes[0]?.values[0]?.[0] as string) || new Date().toISOString();
+
   return {
     total_signals: totalSignals,
     active_clusters: activeClusters,
     review_queue_count: reviewQueueCount,
     avg_confidence: avgConfidence,
-    last_sync_time: new Date().toISOString(),
+    last_sync_time: lastSyncTime,
     sources_healthy: sourcesHealthy,
     sources_total: sourcesTotal,
     db_type: 'SQLite WASM (Single File Persistent /data/hush_radar.sqlite)'
@@ -671,6 +677,7 @@ export async function getSignals(filters: {
   search?: string;
   limit?: number;
   sinceHours?: number;
+  source_id?: string;
 }): Promise<Signal[]> {
   const database = await getDb();
 
@@ -684,6 +691,11 @@ export async function getSignals(filters: {
   if (filters.category && filters.category !== 'all') {
     sql += ' AND category = ?';
     params.push(filters.category);
+  }
+
+  if (filters.source_id) {
+    sql += ' AND source_id = ?';
+    params.push(filters.source_id);
   }
 
   if (filters.minScore !== undefined) {
@@ -964,7 +976,8 @@ export async function getSourcesFromDb(): Promise<Source[]> {
       last_fetched_at: obj.last_fetched_at,
       status: obj.status,
       error_count: obj.error_count,
-      total_signals_ingested: obj.total_signals_ingested
+      total_signals_ingested: obj.total_signals_ingested,
+      last_latency_ms: obj.last_latency_ms !== undefined && obj.last_latency_ms !== null ? Number(obj.last_latency_ms) : undefined
     };
   });
 }
@@ -974,6 +987,72 @@ export async function logSyncRun(sourcesChecked: number, newSignals: number, sta
   database.run(
     'INSERT INTO sync_logs (timestamp, sources_checked, new_signals, status, details) VALUES (?, ?, ?, ?, ?)',
     [new Date().toISOString(), sourcesChecked, newSignals, status, details || null]
+  );
+  saveToDisk();
+}
+
+export interface SyncLogEntry {
+  id: number;
+  timestamp: string;
+  sources_checked: number;
+  new_signals: number;
+  status: string;
+  details: string | null;
+}
+
+/**
+ * Returns recent pipeline sync history (newest first). Drives the "最近同步"
+ * telemetry and the sync history table in the System Monitor.
+ */
+export async function getSyncLogs(limit = 20): Promise<SyncLogEntry[]> {
+  const database = await getDb();
+  const res = database.exec('SELECT id, timestamp, sources_checked, new_signals, status, details FROM sync_logs ORDER BY timestamp DESC, id DESC LIMIT ?', [limit]);
+  if (!res || res.length === 0) return [];
+
+  return res[0].values.map((row) => ({
+    id: Number(row[0]),
+    timestamp: String(row[1]),
+    sources_checked: Number(row[2]),
+    new_signals: Number(row[3]),
+    status: String(row[4]),
+    details: row[5] ? String(row[5]) : null
+  }));
+}
+
+/**
+ * Updates the health/telemetry columns of a single data source after each
+ * pipeline fetch. Keeps the sources table (and thus the System Monitor /
+ * Admin Console) reflecting real pipeline outcomes instead of static seeds.
+ */
+export async function updateSourceHealth(source: {
+  id: string;
+  status: Source['status'];
+  lastFetchedAt: string;
+  errorCount: number;
+  totalSignalsIngested: number;
+  lastLatencyMs?: number;
+}): Promise<void> {
+  const database = await getDb();
+  if (source.lastLatencyMs !== undefined) {
+    database.run(
+      `UPDATE sources SET status = ?, last_fetched_at = ?, error_count = ?, total_signals_ingested = ?, last_latency_ms = ? WHERE id = ?`,
+      [source.status, source.lastFetchedAt, source.errorCount, source.totalSignalsIngested, source.lastLatencyMs, source.id]
+    );
+  } else {
+    database.run(
+      `UPDATE sources SET status = ?, last_fetched_at = ?, error_count = ?, total_signals_ingested = ? WHERE id = ?`,
+      [source.status, source.lastFetchedAt, source.errorCount, source.totalSignalsIngested, source.id]
+    );
+  }
+  saveToDisk();
+}
+
+export async function upsertModelPaper(item: ModelPaperItem): Promise<void> {
+  const database = await getDb();
+  database.run(
+    `INSERT OR REPLACE INTO models_papers (id, name, type, author_org, release_date, key_breakthrough, benchmarks_or_stars, url, radar_score, category)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [item.id, item.name, item.type, item.author_org, item.release_date, item.key_breakthrough, item.benchmarks_or_stars, item.url, item.radar_score, item.category]
   );
   saveToDisk();
 }

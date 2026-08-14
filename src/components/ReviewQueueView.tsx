@@ -41,7 +41,7 @@ export const ReviewQueueView: React.FC<ReviewQueueViewProps> = ({
         <div className="p-12 text-center font-mono-code text-xs text-[#10B981] bg-[#12151B] border border-[#10B981]/30 rounded space-y-2">
           <CheckCircle className="w-8 h-8 mx-auto text-[#10B981]" />
           <div className="font-bold text-sm">{t.reviewQueueEmpty}</div>
-          <div className="text-[#6B7280]">All ingested signals meet Agent Quality Control standards (&ge;65% Confidence).</div>
+          <div className="text-[#6B7280]">{t.reviewQueueEmptyDesc}</div>
         </div>
       ) : (
         <div className="space-y-3">
@@ -57,7 +57,7 @@ export const ReviewQueueView: React.FC<ReviewQueueViewProps> = ({
                 {/* Flag Reason Header */}
                 <div className="flex items-center gap-2 px-3 py-1.5 bg-[#EF4444]/10 border border-[#EF4444]/30 rounded text-xs font-mono-code text-[#EF4444]">
                   <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-                  <span className="font-bold">FLAG REASON:</span>
+                  <span className="font-bold">{t.flagReason}:</span>
                   <span>{sig.review_reason || 'Agent Confidence score below quality threshold.'}</span>
                 </div>
 
@@ -85,7 +85,7 @@ export const ReviewQueueView: React.FC<ReviewQueueViewProps> = ({
                       rel="noreferrer"
                       className="flex items-center gap-1 px-2.5 py-1 bg-[#1E232D] hover:bg-[#2B3545] text-[#9CA3AF] rounded text-xs"
                     >
-                      <span>Inspect Link</span>
+                      <span>{t.inspectLink}</span>
                       <ExternalLink className="w-3 h-3" />
                     </a>
 

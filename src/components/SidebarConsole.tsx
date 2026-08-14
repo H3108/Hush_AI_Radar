@@ -18,7 +18,6 @@ interface NavSubItem {
   id: ActiveTab;
   label: string;
   icon: React.ReactNode;
-  badge?: number;
 }
 
 interface NavGroup {
@@ -135,7 +134,7 @@ export const SidebarConsole: React.FC<SidebarConsoleProps> = ({
                     <span className="truncate text-[11px] uppercase tracking-wide font-semibold">{group.title}</span>
                   </div>
                   <div className="flex items-center gap-1">
-                    {group.id === 'agents' && pendingReviewCount > 0 && (
+                    {group.id === 'radar' && pendingReviewCount > 0 && (
                       <span className="px-1.5 py-0.2 text-[9px] font-bold bg-[#EF4444] text-white rounded-full animate-pulse">
                         {pendingReviewCount}
                       </span>
@@ -168,11 +167,6 @@ export const SidebarConsole: React.FC<SidebarConsoleProps> = ({
                             <span className="truncate text-xs">{item.label}</span>
                           </div>
                           <div className="flex items-center gap-1 flex-shrink-0 ml-1">
-                            {item.badge !== undefined && item.badge > 0 && (
-                              <span className="px-1.5 py-0.2 text-[9px] font-bold bg-[#EF4444] text-white rounded-full">
-                                {item.badge}
-                              </span>
-                            )}
                             {item.id === 'models' && modelsCount > 0 && (
                               <span className="px-1.5 py-0.2 text-[9px] font-bold bg-[#06B6D4]/20 text-[#06B6D4] rounded-full border border-[#06B6D4]/30">
                                 {modelsCount}

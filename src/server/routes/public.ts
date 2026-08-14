@@ -12,6 +12,7 @@ import {
 } from '../db';
 import { GEMINI_MODEL, synthesizeDailyBrief, synthesizePeriodicBrief } from '../gemini';
 import { addPipelineLog } from '../pipeline';
+import { getSyncLogs } from '../db';
 
 /**
  * Public REST endpoints (read-only for unauthenticated users).
@@ -147,6 +148,17 @@ export function createPublicRouter(): express.Router {
     }
   });
 
+  // 6b. Sync history (read-only; drives the "最近同步" & sync telemetry UI)
+  router.get('/api/sync-logs', async (req, res) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
+      const logs = await getSyncLogs(limit);
+      res.json({ count: logs.length, logs });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // 7. RSS 2.0 feed
   router.get('/rss.xml', async (req, res) => {
     try {
@@ -186,8 +198,11 @@ export function createPublicRouter(): express.Router {
   });
 
   // 8. Agent Skill & OpenAPI spec
-  router.get('/api/agent/skill', (_req, res) => {
-    const appUrl = process.env.APP_URL || 'http://localhost:3000';
+  router.get('/api/agent/skill', (req, res) => {
+    const configuredUrl = (process.env.APP_URL || '').trim();
+    const appUrl = configuredUrl && !/MY_APP_URL|YOUR_APP_URL|your-app-url/i.test(configuredUrl)
+      ? configuredUrl
+      : `${req.headers['x-forwarded-proto'] || 'http'}://${req.headers.host || 'localhost:3000'}`;
     res.json({
       name: 'hush-ai-radar',
       description: 'Hush AI Radar Agent Skill: Query real-time AI intelligence, event clusters, daily briefs, and model benchmark tracking.',
@@ -199,7 +214,7 @@ export function createPublicRouter(): express.Router {
         clusters: `${appUrl}/api/clusters`,
         daily_brief: `${appUrl}/api/daily/latest`,
         models_papers: `${appUrl}/api/models-papers`,
-        admin_sync: `${appUrl}/api/admin/sync`
+        sync_logs: `${appUrl}/api/sync-logs`
       },
       openapi_spec: {
         openapi: '3.1.0',

@@ -1,19 +1,76 @@
 import React, { useState, useEffect } from 'react';
-import { BookOpen, Check, Code, Copy, Cpu, ExternalLink, Globe, Rss, Terminal, Zap } from 'lucide-react';
+import { Check, Code, Copy, Cpu, Download, ExternalLink, Globe, Loader2, Rss, Terminal, Zap } from 'lucide-react';
 import { useLanguage } from '../i18n/LanguageContext';
 
 interface ConnectViewProps {
   initialTab?: 'rss' | 'api' | 'skill';
 }
 
+interface SkillManifest {
+  name: string;
+  description: string;
+  version: string;
+  base_url: string;
+  endpoints: Record<string, string>;
+  openapi_spec?: { openapi?: string };
+}
+
 export const ConnectView: React.FC<ConnectViewProps> = ({ initialTab = 'rss' }) => {
   const [activeTab, setActiveTab] = useState<'rss' | 'api' | 'skill'>(initialTab);
   const [copiedSection, setCopiedSection] = useState<string | null>(null);
+  const [skillManifest, setSkillManifest] = useState<SkillManifest | null>(null);
+  const [manifestLoading, setManifestLoading] = useState(true);
+  const [manifestError, setManifestError] = useState<string | null>(null);
   const { t } = useLanguage();
 
   useEffect(() => {
     setActiveTab(initialTab);
   }, [initialTab]);
+
+  // B12: consume the real agent skill manifest (POST-less GET /api/agent/skill)
+  const loadSkillManifest = async () => {
+    setManifestLoading(true);
+    setManifestError(null);
+    try {
+      const res = await fetch('/api/agent/skill');
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      setSkillManifest(data);
+    } catch (err: any) {
+      setManifestError(err?.message || 'Failed to load skill manifest');
+    } finally {
+      setManifestLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadSkillManifest();
+  }, []);
+
+  const handleDownloadSkill = () => {
+    if (!skillManifest) return;
+    const blob = new Blob([JSON.stringify(skillManifest, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${skillManifest.name || 'hush-ai-radar'}-skill.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    setCopiedSection('skill_download');
+    setTimeout(() => setCopiedSection(null), 2000);
+  };
+
+  const liveSkillJson = skillManifest
+    ? JSON.stringify({
+        name: skillManifest.name,
+        description: skillManifest.description,
+        version: skillManifest.version,
+        base_url: skillManifest.base_url,
+        endpoints: skillManifest.endpoints
+      }, null, 2)
+    : '// Loading live manifest from GET /api/agent/skill ...';
 
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
   const rssUrl = `${baseUrl}/rss.xml`;
@@ -42,12 +99,7 @@ for sig in data["signals"]:
   const curlClusters = `curl -X GET "${baseUrl}/api/v1/clusters/latest" \\
   -H "Accept: application/json"`;
 
-  const claudeCodeSkill = `{
-  "name": "hush-ai-radar",
-  "description": "Fetch real-time zero-noise AI intelligence, frontier LLM updates, and research papers",
-  "endpoint": "${baseUrl}/api/v1/signals/latest",
-  "method": "GET"
-}`;
+  const claudeCodeSkill = liveSkillJson;
 
   const cursorRule = `# Hush AI Radar Integration Rule
 Always consult the Hush AI Radar API for latest AI models and breaking research:
@@ -307,10 +359,60 @@ paths:
                   <span className="text-xs text-[#6B7280]">Connect Claude Code, Cursor, Custom GPTs, and LangChain Agents</span>
                 </div>
               </div>
-              <span className="px-2 py-0.5 rounded text-xs bg-[#A855F7]/15 text-[#A855F7] border border-[#A855F7]/30 font-bold">
-                OPENAPI 3.1
-              </span>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <span
+                  className={`px-2 py-0.5 rounded text-xs font-bold border flex items-center gap-1 ${
+                    manifestError
+                      ? 'bg-[#EF4444]/15 text-[#EF4444] border-[#EF4444]/30'
+                      : 'bg-[#A855F7]/15 text-[#A855F7] border-[#A855F7]/30'
+                  }`}
+                >
+                  {manifestLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Zap className="w-3 h-3" />}
+                  {manifestError ? 'MANIFEST OFFLINE' : `MANIFEST v${skillManifest?.version || '?'} LIVE`}
+                </span>
+                <button
+                  onClick={handleDownloadSkill}
+                  disabled={!skillManifest}
+                  className="px-3 py-1.5 bg-[#A855F7]/20 hover:bg-[#A855F7]/30 disabled:opacity-50 text-[#A855F7] border border-[#A855F7]/40 rounded text-xs flex items-center gap-1.5 cursor-pointer font-bold"
+                >
+                  {copiedSection === 'skill_download' ? <Check className="w-3.5 h-3.5 text-[#10B981]" /> : <Download className="w-3.5 h-3.5" />}
+                  <span>{copiedSection === 'skill_download' ? 'Saved!' : 'Download Skill JSON'}</span>
+                </button>
+              </div>
             </div>
+
+            {/* Live Endpoints fetched from /api/agent/skill */}
+            {skillManifest && (
+              <div className="bg-[#0B0D10] border border-[#A855F7]/30 rounded p-3 space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-white font-bold flex items-center gap-1.5">
+                    <Zap className="w-4 h-4 text-[#A855F7]" />
+                    Live Manifest Endpoints (GET /api/agent/skill)
+                  </span>
+                  <button
+                    onClick={() => loadSkillManifest()}
+                    className="text-[#9CA3AF] hover:text-white text-[11px] flex items-center gap-1 cursor-pointer"
+                  >
+                    <Rss className="w-3 h-3" /> Refresh
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5">
+                  {Object.entries(skillManifest.endpoints).map(([key, url]) => (
+                    <div key={key} className="flex items-center justify-between gap-2 text-[11px] px-2 py-1.5 bg-[#12151B] border border-[#1E232D] rounded">
+                      <span className="text-[#A855F7] font-mono-code font-bold">{key}</span>
+                      <a
+                        href={url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-[#06B6D4] font-mono-code truncate hover:underline max-w-[60%]"
+                      >
+                        {url}
+                      </a>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Integration Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -395,5 +497,3 @@ paths:
     </div>
   );
 };
-
-export const AgentSkillView = ConnectView;

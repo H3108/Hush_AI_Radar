@@ -57,7 +57,6 @@ export interface Translations {
   radarStatusValue: string;
   lastSyncLabel: string;
   sourceHealthLabel: string;
-  sourceHealthValue: string;
   publicReadonlyNotice: string;
 
   // Visualizations
@@ -87,6 +86,8 @@ export interface Translations {
   rawContent: string;
   briefHistory: string;
   noHistory: string;
+  briefHeaderFallback: string;
+  triggerManualSync: string;
   queryingDb: string;
   noSignalsFound: string;
 
@@ -113,6 +114,7 @@ export interface Translations {
   generateBrief: string;
   generatingBrief: string;
   regenerateBrief: string;
+  periodicEmptyHint: string;
 
   // Models & Papers
   modelsDbTitle: string;
@@ -151,7 +153,6 @@ export interface Translations {
   storageDriver: string;
   aiModel: string;
   lastSyncRun: string;
-  sourcesListTitle: string;
   authorityWeight: string;
   signalsIngested: string;
   status: string;
@@ -215,7 +216,6 @@ export const translations: Record<Language, Translations> = {
     radarStatusValue: 'LIVE (正常运行)',
     lastSyncLabel: '最近同步',
     sourceHealthLabel: '数据源健康',
-    sourceHealthValue: '18/18 正常 (100%)',
     publicReadonlyNotice: '公开只读模式 · 定时后台自动同步',
 
     // Visualizations
@@ -245,6 +245,8 @@ export const translations: Record<Language, Translations> = {
     rawContent: '原始内容',
     briefHistory: '历史简报',
     noHistory: '暂无历史简报，生成后自动归档',
+    briefHeaderFallback: '今日 AI 简报尚未生成',
+    triggerManualSync: '手动同步',
     queryingDb: '正在查询 SQLite 雷达数据库...',
     noSignalsFound: '未找到符合当前筛选条件的 AI 情报。',
 
@@ -259,7 +261,7 @@ export const translations: Record<Language, Translations> = {
 
     // Daily Brief
     dailyBriefTitle: 'AI 精华日报',
-    dailyBriefDesc: '由 Gemini 3.6 Flash 从当日高热度情报自动归纳合成。',
+    dailyBriefDesc: '由 gemini-3.1-flash-lite 从当日高热度情报自动归纳合成。',
     reSynthesize: '重新合成日报',
     synthesizing: 'Gemini 合成中...',
     copyMd: '复制 Markdown',
@@ -270,8 +272,8 @@ export const translations: Record<Language, Translations> = {
     generateBrief: '生成简报',
     generatingBrief: 'AI 生成中...',
     regenerateBrief: '重新生成',
+    periodicEmptyHint: '该周期简报尚未生成，点击「重新生成」或等待定时任务（周报：每周日 23:55 UTC / 月报：每月 1 日 23:55 UTC）自动生成。',
     switchBriefLang: '切换日报语言',
-
     // Models & Papers
     modelsDbTitle: '模型与重磅论文知识库',
     modelsDbDesc: '收录全球顶尖 LLM、开源权重、ArXiv 突破论文与框架数据。',
@@ -304,12 +306,11 @@ export const translations: Record<Language, Translations> = {
 
     // Monitor
     systemMonitorTitle: '系统与数据源巡检监控',
-    systemMonitorDesc: '实时监控 Agent 流水线、Gemini 3.6 Flash 推理与 SQLite 存储状态。',
+    systemMonitorDesc: '实时监控 Agent 流水线、gemini-3.1-flash-lite 推理与 SQLite 存储状态。',
     dbInfrastructure: '数据库架构与引擎指标',
     storageDriver: '存储驱动',
     aiModel: 'AI 模型',
     lastSyncRun: '最近同步运行',
-    sourcesListTitle: '18 个顶级 AI 巡检源',
     authorityWeight: '权威权重',
     signalsIngested: '已入库信号数',
     status: '运行状态'
@@ -371,7 +372,6 @@ export const translations: Record<Language, Translations> = {
     radarStatusValue: 'LIVE (Operational)',
     lastSyncLabel: 'Last Sync',
     sourceHealthLabel: 'Source Health',
-    sourceHealthValue: '18/18 Active (100%)',
     publicReadonlyNotice: 'Public View-Only · Auto Background Syncing',
 
     // Visualizations
@@ -401,6 +401,8 @@ export const translations: Record<Language, Translations> = {
     rawContent: 'Raw Content',
     briefHistory: 'Brief History',
     noHistory: 'No historical briefs yet — they auto-archive on generation',
+    briefHeaderFallback: 'Today\'s AI brief not generated yet',
+    triggerManualSync: 'Manual Sync',
     queryingDb: 'Querying SQLite Radar Database...',
     noSignalsFound: 'No intelligence signals match current filter criteria.',
 
@@ -415,7 +417,7 @@ export const translations: Record<Language, Translations> = {
 
     // Daily Brief
     dailyBriefTitle: 'AI Daily Intelligence Brief',
-    dailyBriefDesc: 'Auto-synthesized by Gemini 3.6 Flash from top daily signals.',
+    dailyBriefDesc: 'Auto-synthesized by gemini-3.1-flash-lite from top daily signals.',
     reSynthesize: 'Re-Synthesize Brief',
     synthesizing: 'Gemini Synthesizing...',
     copyMd: 'Copy MD',
@@ -426,6 +428,7 @@ export const translations: Record<Language, Translations> = {
     generateBrief: 'Generate Brief',
     generatingBrief: 'Generating...',
     regenerateBrief: 'Regenerate',
+    periodicEmptyHint: 'This periodic brief has not been generated yet. Click "Regenerate" or wait for the scheduled task (Weekly: Sun 23:55 UTC / Monthly: 1st 23:55 UTC).',
     switchBriefLang: 'Brief Language',
 
     // Models & Papers
@@ -460,12 +463,11 @@ export const translations: Record<Language, Translations> = {
 
     // Monitor
     systemMonitorTitle: 'System & Source Health Monitor',
-    systemMonitorDesc: 'Real-time status of pipeline automation, Gemini 3.6 Flash inference, and SQLite storage.',
+    systemMonitorDesc: 'Real-time status of pipeline automation, gemini-3.1-flash-lite inference, and SQLite storage.',
     dbInfrastructure: 'Database & Infrastructure Metrics',
     storageDriver: 'Storage Driver',
     aiModel: 'AI Model',
     lastSyncRun: 'Last Sync Run',
-    sourcesListTitle: '18 Curated AI Sources',
     authorityWeight: 'Authority Weight',
     signalsIngested: 'Signals Ingested',
     status: 'Status'

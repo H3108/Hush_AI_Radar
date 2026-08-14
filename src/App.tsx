@@ -21,9 +21,7 @@ export function App() {
 
   useEffect(() => {
     const handlePopState = () => {
-      if (window.location.pathname === '/admin') {
-        setActiveTab('admin');
-      }
+      setActiveTab(window.location.pathname === '/admin' ? 'admin' : 'stream');
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
@@ -31,6 +29,7 @@ export function App() {
 
   const handleTabChange = (tab: ActiveTab) => {
     setActiveTab(tab);
+    if (tab !== 'clusters') setHighlightedClusterId(null);
     if (tab === 'admin') {
       if (window.location.pathname !== '/admin') {
         window.history.pushState(null, '', '/admin');
@@ -289,6 +288,8 @@ export function App() {
                 modelsCount={modelsPapers.length}
                 onSelectTag={handleSelectTag}
                 onSelectCategory={handleSelectCategoryFromVis}
+                dailyBrief={dailyBrief}
+                onOpenDaily={() => handleTabChange('daily')}
               />
 
               <SignalFeed
@@ -306,7 +307,7 @@ export function App() {
           )}
 
           {activeTab === 'clusters' && (
-            <EventClustersView clusters={clusters} isLoading={isLoading} highlightId={highlightedClusterId} />
+            <EventClustersView clusters={clusters} isLoading={isLoading} highlightId={highlightedClusterId} signals={signals} />
           )}
 
           {activeTab === 'daily' && (
@@ -347,7 +348,9 @@ export function App() {
             <ModelsPapersView items={modelsPapers} isLoading={isLoading} initialTypeFilter="paper" />
           )}
 
-          {activeTab === 'monitor' && <SystemMonitor stats={stats} sources={sources} />}
+          {activeTab === 'monitor' && (
+            <SystemMonitor stats={stats} sources={sources} onTriggerSync={handleTriggerSync} isSyncing={isSyncing} />
+          )}
 
           {activeTab === 'rss' && <ConnectView initialTab="rss" />}
 

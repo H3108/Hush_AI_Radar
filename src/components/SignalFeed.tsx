@@ -143,7 +143,7 @@ export const SignalFeed: React.FC<SignalFeedProps> = ({
                     {activeTooltipId === sig.id && (
                       <div className="absolute left-16 top-0 z-50 w-56 p-2.5 bg-[#0B0D10] border border-[#2B3545] rounded shadow-xl text-[11px] font-mono-code text-white space-y-1">
                         <div className="text-[10px] text-[#10B981] font-bold border-b border-[#1E232D] pb-1">
-                          RADAR SCORE BREAKDOWN
+                          {t.scoreBreakdown}
                         </div>
                         <div className="flex justify-between text-[#9CA3AF]">
                           <span>{t.sourceAuth}:</span>
@@ -227,7 +227,7 @@ export const SignalFeed: React.FC<SignalFeedProps> = ({
                       {sig.raw_content && (
                         <div className="rounded bg-[#0B0D10] border border-[#1E232D] p-3">
                           <div className="text-[10px] font-mono-code text-[#6B7280] uppercase tracking-wider mb-1.5 flex items-center justify-between">
-                            <span>RAW CONTENT</span>
+                            <span>{t.rawContent}</span>
                             <button
                               onClick={() => setExpandedId(null)}
                               className="text-[#9CA3AF] hover:text-white cursor-pointer"

@@ -1,15 +1,45 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Activity, Flame, Layers, Radio, ShieldAlert, Sparkles, Tag, TrendingUp, Zap } from 'lucide-react';
 import { Signal, Source, SystemStats } from '../types';
 import { useLanguage } from '../i18n/LanguageContext';
+
+/** B8: tiny inline SVG sparkline from a real data series. */
+const Sparkline: React.FC<{ data: number[]; color?: string; width?: number; height?: number }> = ({
+  data,
+  color = '#10B981',
+  width = 96,
+  height = 28
+}) => {
+  if (!data || data.length < 2) return null;
+  const min = Math.min(...data);
+  const max = Math.max(...data);
+  const range = max - min || 1;
+  const step = width / (data.length - 1);
+  const points = data.map((v, i) => {
+    const x = i * step;
+    const y = height - 2 - ((v - min) / range) * (height - 4);
+    return `${x},${y}`;
+  }).join(' ');
+  const lastPoint = points.split(' ').pop();
+  const [lastX, lastY] = (lastPoint || '0,0').split(',');
+
+  return (
+    <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="overflow-visible" aria-hidden="true">
+      <polyline points={points} fill="none" stroke={color} strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" opacity="0.9" />
+      <circle cx={lastX} cy={lastY} r="2" fill={color} />
+    </svg>
+  );
+};
 
 interface DashboardVisualizerProps {
   stats: SystemStats | null;
   signals: Signal[];
   sources: Source[];
   modelsCount?: number;
-  onSelectTag?: (tag: string) => void;
-  onSelectCategory?: (category: string) => void;
+  onSelectTag: (tag: string) => void;
+  onSelectCategory: (category: string) => void;
+  dailyBrief?: { headline?: string; executive_summary?: string; generated_at?: string } | null;
+  onOpenDaily?: () => void;
 }
 
 export const DashboardVisualizer: React.FC<DashboardVisualizerProps> = ({
@@ -18,20 +48,58 @@ export const DashboardVisualizer: React.FC<DashboardVisualizerProps> = ({
   sources,
   modelsCount = 0,
   onSelectTag,
-  onSelectCategory
+  onSelectCategory,
+  dailyBrief,
+  onOpenDaily
 }) => {
   const { t } = useLanguage();
   const [activeVisTab, setActiveVisTab] = useState<'trend' | 'tags' | 'sources'>('trend');
+  const [skillManifest, setSkillManifest] = useState<{ name?: string; version?: string; endpoints?: Record<string, string> } | null>(null);
+
+  // B15: fetch the live agent skill manifest once for the quick-fetch widget
+  useEffect(() => {
+    fetch('/api/agent/skill')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => setSkillManifest(data))
+      .catch(() => {});
+  }, []);
 
   // Compute 24h Signals count from real publish timestamps
   const signals24h = signals.filter((s) => {
     const t = new Date(s.publish_time).getTime();
     return !isNaN(t) && Date.now() - t <= 24 * 60 * 60 * 1000;
   }).length;
-  // Compute Hot Events (Score >= 80)
+  // Hot Events (Score >= 80)
   const hotEventsCount = signals.filter((s) => s.radar_score >= 80).length;
   // Model Updates
   const modelUpdatesCount = modelsCount;
+
+  // B8: per-hour signal histogram over the last 24h (real timestamps → sparkline)
+  const hourBuckets = Array.from({ length: 24 }, () => 0);
+  signals.forEach((s) => {
+    const t = new Date(s.publish_time).getTime();
+    if (isNaN(t) || Date.now() - t > 24 * 60 * 60 * 1000) return;
+    const hourIdx = Math.min(23, Math.max(0, 23 - Math.floor((Date.now() - t) / 3600000)));
+    hourBuckets[hourIdx]++;
+  });
+
+  // B9: AI Trend Pulse ranked by 24h momentum (community vs source-authority
+  // baseline), not by absolute score. Delta is a real derived percentage.
+  const pulseItems = [...signals]
+    .map((s) => {
+      const baseline = s.score_breakdown.source_authority || 1;
+      const momentum = ((s.score_breakdown.community_signal - baseline) / baseline) * 100;
+      return {
+        tag: s.title_zh || s.title_raw,
+        heat: s.radar_score,
+        momentum,
+        delta: `${momentum >= 0 ? '+' : ''}${momentum.toFixed(1)}%`,
+        category: s.category,
+        spark: [s.score_breakdown.source_authority, s.score_breakdown.freshness_score, s.score_breakdown.ai_impact_score, s.score_breakdown.community_signal]
+      };
+    })
+    .sort((a, b) => b.momentum - a.momentum)
+    .slice(0, 4);
 
   // Tags cloud from real signals only (no synthetic fallback)
   const tagCounts: Record<string, number> = {};
@@ -51,17 +119,6 @@ export const DashboardVisualizer: React.FC<DashboardVisualizerProps> = ({
     .slice(0, 6);
 
   const maxSignalsCount = Math.max(...sourceRankings.map((s) => s.total_signals_ingested), 1);
-
-  // AI Trend Pulse Items derived from top-signal signals
-  const pulseItems = [...signals]
-    .sort((a, b) => b.radar_score - a.radar_score)
-    .slice(0, 4)
-    .map((s) => ({
-      tag: s.title_zh || s.title_raw,
-      heat: s.radar_score,
-      delta: '',
-      category: s.category
-    }));
 
   // Category Activity Breakdown derived from real signals data
   const categoryDefs = [
@@ -103,6 +160,9 @@ export const DashboardVisualizer: React.FC<DashboardVisualizerProps> = ({
             <div className="text-[10px] text-[#9CA3AF] mt-1 flex items-center gap-1">
               <span>{t.totalSignals}:</span>
               <span className="text-white font-semibold">{stats?.total_signals || 0}</span>
+            </div>
+            <div className="mt-1 opacity-80">
+              <Sparkline data={hourBuckets} color="#10B981" width={110} height={26} />
             </div>
           </div>
           <div className="p-2.5 bg-[#10B981]/10 rounded border border-[#10B981]/20 text-[#10B981]">
@@ -159,7 +219,7 @@ export const DashboardVisualizer: React.FC<DashboardVisualizerProps> = ({
               {t.agentConfidence}
             </div>
             <div className="text-2xl font-bold text-white mt-0.5 flex items-center gap-2">
-              <span>{stats?.avg_confidence || 94.2}%</span>
+              <span>{stats?.avg_confidence ?? 94.2}%</span>
               {stats && stats.review_queue_count > 0 ? (
                 <span className="text-[10px] bg-[#EF4444]/20 text-[#EF4444] px-1.5 py-0.2 rounded border border-[#EF4444]/30 font-semibold animate-pulse">
                   {stats.review_queue_count} {t.actionNeeded}
@@ -190,17 +250,70 @@ export const DashboardVisualizer: React.FC<DashboardVisualizerProps> = ({
           {pulseItems.map((item, idx) => (
             <div
               key={idx}
-              onClick={() => onSelectTag && onSelectTag(item.tag.split(' ')[0])}
+              onClick={() => onSelectTag && onSelectTag(item.tag)}
               className="flex items-center gap-2 px-2.5 py-1 bg-[#0B0D10] border border-[#1E232D] hover:border-[#10B981]/40 rounded text-[11px] whitespace-nowrap cursor-pointer transition-all flex-shrink-0"
             >
               <span className="text-[#6B7280]">0{idx + 1}.</span>
-              <span className="text-white font-semibold">{item.tag}</span>
-              <span className="text-[#10B981] font-bold">{item.delta}</span>
+              <span className="text-white font-semibold max-w-[180px] truncate">{item.tag}</span>
+              <Sparkline data={item.spark} color="#3B82F6" width={44} height={18} />
+              <span className={`font-bold ${item.momentum >= 0 ? 'text-[#10B981]' : 'text-[#EF4444]'}`}>{item.delta}</span>
               <span className="text-[9px] text-[#9CA3AF] bg-[#1E232D] px-1 rounded">
                 Score {item.heat}
               </span>
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* 2b. B15: Today's Express Summary + Agent Skill quick-fetch widget */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        {/* Today's Express Summary */}
+        <button
+          onClick={onOpenDaily}
+          className="text-left bg-[#12151B] hover:border-[#F59E0B]/60 border border-[#F59E0B]/30 rounded p-3 transition-all cursor-pointer group"
+        >
+          <div className="flex items-center gap-1.5 text-[10px] font-mono-code text-[#F59E0B] uppercase tracking-wider mb-1.5">
+            <Sparkles className="w-3 h-3" />
+            <span>今日极速摘要 / Today's Express</span>
+            <span className="ml-auto text-[#6B7280] normal-case">
+              {dailyBrief?.generated_at ? new Date(dailyBrief.generated_at).toLocaleString() : ''}
+            </span>
+          </div>
+          <div className="text-sm font-bold text-white group-hover:text-[#F59E0B] transition-colors line-clamp-1">
+            {dailyBrief?.headline || t.briefHeaderFallback || 'No daily brief generated yet'}
+          </div>
+          <p className="text-[11px] text-[#9CA3AF] mt-1 line-clamp-2">
+            {dailyBrief?.executive_summary || 'Click to open the AI-generated daily intelligence briefing.'}
+          </p>
+        </button>
+
+        {/* Agent Skill Quick-Fetch */}
+        <div className="bg-[#12151B] border border-[#A855F7]/30 rounded p-3">
+          <div className="flex items-center gap-1.5 text-[10px] font-mono-code text-[#A855F7] uppercase tracking-wider mb-1.5">
+            <Zap className="w-3 h-3" />
+            <span>Agent Skill 速取 / Quick Fetch</span>
+            {skillManifest?.version && (
+              <span className="ml-auto text-[#6B7280] normal-case">v{skillManifest.version} · {skillManifest.name}</span>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {skillManifest?.endpoints
+              ? Object.entries(skillManifest.endpoints).slice(0, 4).map(([key, url]) => (
+                  <a
+                    key={key}
+                    href={url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center gap-1 px-2 py-1 bg-[#0B0D10] border border-[#1E232D] hover:border-[#A855F7]/50 text-[#06B6D4] text-[10px] font-mono-code rounded transition-all"
+                  >
+                    <Flame className="w-3 h-3 text-[#A855F7]" />
+                    <span className="font-bold">{key}</span>
+                  </a>
+                ))
+              : [0, 1, 2, 3].map((i) => (
+                  <div key={i} className="w-20 h-6 bg-[#0B0D10] border border-[#1E232D] rounded animate-pulse" />
+                ))}
+          </div>
         </div>
       </div>
 
@@ -248,7 +361,7 @@ export const DashboardVisualizer: React.FC<DashboardVisualizerProps> = ({
           <div className="space-y-3">
             <div className="text-[11px] text-[#9CA3AF] flex items-center justify-between">
               <span>{t.trendChangesTitle}</span>
-              <span className="text-[#6B7280]">18 Sources Ingest Ratio</span>
+              <span className="text-[#6B7280]">{sources.length} Sources Ingest Ratio</span>
             </div>
             {/* Category Activity Bars */}
             <div className="space-y-2">
@@ -268,7 +381,7 @@ export const DashboardVisualizer: React.FC<DashboardVisualizerProps> = ({
                   <div className="w-full bg-[#0B0D10] h-2 rounded overflow-hidden border border-[#1E232D]">
                     <div
                       className="h-full rounded transition-all duration-500"
-                      style={{ width: `${cat.pct * 2.5}%`, backgroundColor: cat.color }}
+                      style={{ width: `${Math.min(100, cat.pct * 2.5)}%`, backgroundColor: cat.color }}
                     ></div>
                   </div>
                 </div>
