@@ -7,6 +7,7 @@ interface DashboardVisualizerProps {
   stats: SystemStats | null;
   signals: Signal[];
   sources: Source[];
+  modelsCount?: number;
   onSelectTag?: (tag: string) => void;
   onSelectCategory?: (category: string) => void;
 }
@@ -15,20 +16,24 @@ export const DashboardVisualizer: React.FC<DashboardVisualizerProps> = ({
   stats,
   signals,
   sources,
+  modelsCount = 0,
   onSelectTag,
   onSelectCategory
 }) => {
   const { t } = useLanguage();
   const [activeVisTab, setActiveVisTab] = useState<'trend' | 'tags' | 'sources'>('trend');
 
-  // Compute 24h Signals count
-  const signals24h = stats?.signals_24h_count || (signals.length > 0 ? Math.min(signals.length, 28) : 28);
+  // Compute 24h Signals count from real publish timestamps
+  const signals24h = signals.filter((s) => {
+    const t = new Date(s.publish_time).getTime();
+    return !isNaN(t) && Date.now() - t <= 24 * 60 * 60 * 1000;
+  }).length;
   // Compute Hot Events (Score >= 80)
-  const hotEventsCount = stats?.hot_events_count || signals.filter((s) => s.radar_score >= 80).length || 12;
+  const hotEventsCount = signals.filter((s) => s.radar_score >= 80).length;
   // Model Updates
-  const modelUpdatesCount = stats?.models_count || 5;
+  const modelUpdatesCount = modelsCount;
 
-  // Compute Tags Cloud & Hit Frequencies
+  // Tags cloud from real signals only (no synthetic fallback)
   const tagCounts: Record<string, number> = {};
   signals.forEach((s) => {
     s.tags.forEach((tag) => {
@@ -36,54 +41,48 @@ export const DashboardVisualizer: React.FC<DashboardVisualizerProps> = ({
     });
   });
 
-  // Default fallback tags if signals are loading
-  if (Object.keys(tagCounts).length === 0) {
-    tagCounts['DeepSeek'] = 8;
-    tagCounts['Claude'] = 6;
-    tagCounts['Reasoning'] = 5;
-    tagCounts['Sora'] = 4;
-    tagCounts['MLA'] = 4;
-    tagCounts['SWE-bench'] = 3;
-    tagCounts['MCTS'] = 3;
-    tagCounts['MoE'] = 5;
-    tagCounts['FP8'] = 3;
-    tagCounts['LLM'] = 7;
-  }
-
   const sortedTags = Object.entries(tagCounts)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 12);
 
-  // Compute Source Contribution Ranking
-  const sourceRankings = (sources.length > 0 ? sources : [
-    { id: 'github-trending', name: 'GitHub Trending AI', authority_weight: 5.0, total_signals_ingested: 38, category: 'opensource', status: 'active' },
-    { id: 'anthropic-research', name: 'Anthropic Research', authority_weight: 5.0, total_signals_ingested: 26, category: 'giants', status: 'active' },
-    { id: 'openai-blog', name: 'OpenAI Official', authority_weight: 5.0, total_signals_ingested: 24, category: 'giants', status: 'active' },
-    { id: 'arxiv-cs-ai', name: 'ArXiv cs.AI Papers', authority_weight: 4.8, total_signals_ingested: 20, category: 'paper', status: 'active' },
-    { id: 'google-deepmind', name: 'Google DeepMind', authority_weight: 4.9, total_signals_ingested: 18, category: 'giants', status: 'active' },
-    { id: 'huggingface-papers', name: 'Hugging Face Daily Papers', authority_weight: 4.7, total_signals_ingested: 16, category: 'paper', status: 'active' },
-  ] as Source[])
+  // Compute Source Contribution Ranking from real sources
+  const sourceRankings = [...sources]
     .sort((a, b) => b.total_signals_ingested - a.total_signals_ingested)
     .slice(0, 6);
 
   const maxSignalsCount = Math.max(...sourceRankings.map((s) => s.total_signals_ingested), 1);
 
-  // AI Trend Pulse Items
-  const pulseItems = [
-    { tag: 'DeepSeek-V3 MoE', heat: 98.4, delta: '+42%', category: '开源与架构' },
-    { tag: 'Claude 3.7 Extended Reasoning', heat: 96.8, delta: '+38%', category: '大厂模型' },
-    { tag: 'OpenAI Sora Turbo API', heat: 94.2, delta: '+31%', category: '多模态视频' },
-    { tag: 'Selective MCTS Search', heat: 88.0, delta: '+24%', category: '前沿论文' },
-  ];
+  // AI Trend Pulse Items derived from top-signal signals
+  const pulseItems = [...signals]
+    .sort((a, b) => b.radar_score - a.radar_score)
+    .slice(0, 4)
+    .map((s) => ({
+      tag: s.title_zh || s.title_raw,
+      heat: s.radar_score,
+      delta: '',
+      category: s.category
+    }));
 
-  // Category Activity Breakdown Data for Trend Chart
-  const categoryActivity = [
-    { key: 'giants', name: t.techGiants, count: 42, pct: 30, color: '#10B981' },
-    { key: 'opensource', name: t.openSource, count: 38, pct: 27, color: '#3B82F6' },
-    { key: 'paper', name: t.academicPapers, count: 28, pct: 20, color: '#F59E0B' },
-    { key: 'product', name: t.productReleases, count: 20, pct: 14, color: '#06B6D4' },
-    { key: 'media', name: t.techMedia, count: 14, pct: 9, color: '#A855F7' },
-  ];
+  // Category Activity Breakdown derived from real signals data
+  const categoryDefs = [
+    { key: 'giants', name: t.techGiants, color: '#10B981' },
+    { key: 'opensource', name: t.openSource, color: '#3B82F6' },
+    { key: 'paper', name: t.academicPapers, color: '#F59E0B' },
+    { key: 'product', name: t.productReleases, color: '#06B6D4' },
+    { key: 'media', name: t.techMedia, color: '#A855F7' },
+  ] as const;
+  const categoryCounts: Record<string, number> = {};
+  signals.forEach((s) => {
+    const key = categoryDefs.some((c) => c.key === s.category) ? s.category : null;
+    if (key) categoryCounts[key] = (categoryCounts[key] || 0) + 1;
+  });
+  const totalCategorized = categoryDefs.reduce((sum, c) => sum + (categoryCounts[c.key] || 0), 0) || 1;
+  const categoryActivity = categoryDefs
+    .filter((c) => (categoryCounts[c.key] || 0) > 0)
+    .map((c) => {
+      const count = categoryCounts[c.key] || 0;
+      return { key: c.key, name: c.name, count, pct: Math.round((count / totalCategorized) * 100), color: c.color };
+    });
 
   return (
     <div className="bg-[#0B0D10] border-b border-[#1E232D] p-4 space-y-4 font-mono-code">
@@ -98,12 +97,12 @@ export const DashboardVisualizer: React.FC<DashboardVisualizerProps> = ({
             <div className="text-2xl font-bold text-white mt-0.5 flex items-center gap-2">
               <span>+{signals24h}</span>
               <span className="text-[10px] bg-[#10B981]/20 text-[#10B981] px-1.5 py-0.2 rounded border border-[#10B981]/30 font-semibold">
-                +18.4%
+                LIVE
               </span>
             </div>
             <div className="text-[10px] text-[#9CA3AF] mt-1 flex items-center gap-1">
               <span>{t.totalSignals}:</span>
-              <span className="text-white font-semibold">{stats?.total_signals || 142}</span>
+              <span className="text-white font-semibold">{stats?.total_signals || 0}</span>
             </div>
           </div>
           <div className="p-2.5 bg-[#10B981]/10 rounded border border-[#10B981]/20 text-[#10B981]">
@@ -124,7 +123,7 @@ export const DashboardVisualizer: React.FC<DashboardVisualizerProps> = ({
               </span>
             </div>
             <div className="text-[10px] text-[#3B82F6] mt-1 truncate">
-              {t.eventClusters}: <span className="text-white font-semibold">{stats?.active_clusters || 3}</span>
+              {t.eventClusters}: <span className="text-white font-semibold">{stats?.active_clusters || 0}</span>
             </div>
           </div>
           <div className="p-2.5 bg-[#F59E0B]/10 rounded border border-[#F59E0B]/20 text-[#F59E0B]">
@@ -145,7 +144,7 @@ export const DashboardVisualizer: React.FC<DashboardVisualizerProps> = ({
               </span>
             </div>
             <div className="text-[10px] text-[#9CA3AF] mt-1 truncate">
-              DeepSeek, Claude, Sora
+              {t.modelUpdates}: {modelUpdatesCount} · 数据源 {sources.length}
             </div>
           </div>
           <div className="p-2.5 bg-[#06B6D4]/10 rounded border border-[#06B6D4]/20 text-[#06B6D4]">
@@ -172,7 +171,7 @@ export const DashboardVisualizer: React.FC<DashboardVisualizerProps> = ({
               )}
             </div>
             <div className="text-[10px] text-[#9CA3AF] mt-1 truncate">
-              Gemini 3.6 Flash Audit
+              {stats?.engine?.model || 'Gemini'} Audit
             </div>
           </div>
           <div className="p-2.5 bg-[#A855F7]/10 rounded border border-[#A855F7]/20 text-[#A855F7]">

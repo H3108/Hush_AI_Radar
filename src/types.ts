@@ -108,4 +108,5 @@ export interface SystemStats {
   sources_healthy: number;
   sources_total: number;
   db_type: string;
+  engine?: { model: string; apiConfigured: boolean };
 }

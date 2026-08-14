@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { BookOpen, ChevronDown, ChevronRight, Code, Cpu, Database, FileText, Layers, Lock, Radio, Rss, Sparkles } from 'lucide-react';
 import { useLanguage } from '../i18n/LanguageContext';
+import { SystemStats } from '../types';
 
 export type ActiveTab = 'stream' | 'clusters' | 'daily' | 'weekly' | 'monthly' | 'models' | 'papers' | 'rss' | 'api' | 'skill' | 'admin';
 
@@ -8,6 +9,7 @@ interface SidebarConsoleProps {
   activeTab: ActiveTab;
   onTabChange: (tab: ActiveTab) => void;
   pendingReviewCount: number;
+  stats?: SystemStats | null;
 }
 
 interface NavSubItem {
@@ -28,7 +30,8 @@ interface NavGroup {
 export const SidebarConsole: React.FC<SidebarConsoleProps> = ({
   activeTab,
   onTabChange,
-  pendingReviewCount
+  pendingReviewCount,
+  stats
 }) => {
   const { t } = useLanguage();
 
@@ -198,7 +201,7 @@ export const SidebarConsole: React.FC<SidebarConsoleProps> = ({
         <div className="p-3 bg-[#0B0D10] border border-[#1E232D] rounded space-y-1 text-[11px] font-mono-code text-[#6B7280]">
           <div className="flex items-center justify-between text-[#9CA3AF]">
             <span>{t.engine}:</span>
-            <span className="text-[#10B981] font-semibold">Gemini 3.6 Flash</span>
+            <span className="text-[#10B981] font-semibold">{stats?.engine?.model || 'Gemini'}</span>
           </div>
           <div className="flex items-center justify-between text-[#9CA3AF]">
             <span>{t.storage}:</span>

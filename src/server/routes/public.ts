@@ -8,7 +8,7 @@ import {
   getSystemStats,
   saveDailyBrief
 } from '../db';
-import { synthesizeDailyBrief } from '../gemini';
+import { GEMINI_MODEL, synthesizeDailyBrief } from '../gemini';
 import { addPipelineLog } from '../pipeline';
 
 /**
@@ -21,7 +21,8 @@ export function createPublicRouter(): express.Router {
   // 1. System Stats
   router.get('/api/stats', async (_req, res) => {
     try {
-      res.json(await getSystemStats());
+      const stats = await getSystemStats();
+      res.json({ ...stats, engine: { model: GEMINI_MODEL, apiConfigured: !!process.env.GEMINI_API_KEY } });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }

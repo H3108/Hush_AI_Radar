@@ -224,6 +224,7 @@ export function App() {
           activeTab={activeTab}
           onTabChange={handleTabChange}
           pendingReviewCount={pendingSignals.length}
+          stats={stats}
         />
 
         {/* View Switcher */}
@@ -235,6 +236,7 @@ export function App() {
                 stats={stats}
                 signals={signals}
                 sources={sources}
+                modelsCount={modelsPapers.length}
                 onSelectTag={handleSelectTag}
                 onSelectCategory={handleSelectCategoryFromVis}
               />
