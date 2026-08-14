@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express from 'express';
 import path from 'path';
 import crypto from 'crypto';
@@ -15,6 +16,7 @@ import {
   updateSignalReviewStatus
 } from './src/server/db';
 import { synthesizeDailyBrief } from './src/server/gemini';
+import { GEMINI_MODEL } from './src/server/gemini';
 import { addPipelineLog, executeRadarPipelineScan, getPipelineLogs } from './src/server/pipeline';
 
 /**
@@ -415,7 +417,7 @@ async function startServer() {
         },
         gemini: {
           hasApiKey,
-          model: 'gemini-3.6-flash',
+          model: GEMINI_MODEL,
           status: hasApiKey ? 'ACTIVE' : 'FALLBACK_MODE',
           apiConfigured: hasApiKey
         },
@@ -466,7 +468,7 @@ async function startServer() {
       const analysis = await synthesizeDailyBrief(testSignals, 'en');
       const latencyMs = Date.now() - startTime;
 
-      addPipelineLog('gemini', `[Gemini Ping] Latency: ${latencyMs}ms, Model: gemini-3.6-flash`);
+      addPipelineLog('gemini', `[Gemini Ping] Latency: ${latencyMs}ms, Model: ${GEMINI_MODEL}`);
       res.json({
         status: 'ACTIVE',
         message: 'Gemini 3.6 Flash API responsive & healthy.',

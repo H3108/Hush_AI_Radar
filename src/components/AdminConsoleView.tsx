@@ -606,7 +606,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
             <div className="space-y-1.5 text-xs font-mono-code">
               <div className="flex justify-between border-b border-[#1E232D] pb-1">
                 <span className="text-[#6B7280]">Target Model:</span>
-                <span className="text-[#F59E0B] font-semibold">gemini-3.6-flash</span>
+                <span className="text-[#F59E0B] font-semibold">{gemini?.model || 'gemini-2.5-flash'}</span>
               </div>
               <div className="flex justify-between border-b border-[#1E232D] pb-1">
                 <span className="text-[#6B7280]">GEMINI_API_KEY:</span>

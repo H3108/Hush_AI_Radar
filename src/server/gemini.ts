@@ -1,6 +1,8 @@
 import { GoogleGenAI, Type } from '@google/genai';
 import { DailyBrief, DailyBriefSection, EventCluster, Signal, Source } from '../types';
 
+export const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite';
+
 let genAIClient: GoogleGenAI | null = null;
 
 function getGenAI(): GoogleGenAI | null {
@@ -73,7 +75,7 @@ Tasks:
 8. Extract 2 to 4 tech tags ("tags", e.g. ["DeepSeek", "LLM", "OpenSource"]).`;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-3.6-flash',
+      model: GEMINI_MODEL,
       contents: prompt,
       config: {
         responseMimeType: 'application/json',
@@ -179,7 +181,7 @@ export async function synthesizeDailyBrief(signals: Signal[], lang: 'zh-CN' | 'e
     const prompt = `You are Hush AI Radar's chief editor. Synthesize a professional Daily Intelligence Brief for date ${todayStr} in ${lang === 'en' ? 'English' : 'Chinese'} based on these top AI signals:\n${signalSummaryText}\n\nLanguage requirement: ${langInstructions}\n\nTasks:\n1. Create a punchy, executive-level headline.\n2. Write a 2-sentence executive_summary.\n3. Output full clean markdown_content formatted with radar styling (# 📡 Hush AI Radar · Daily Brief...).`;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-3.6-flash',
+      model: GEMINI_MODEL,
       contents: prompt,
       config: {
         responseMimeType: 'application/json',
