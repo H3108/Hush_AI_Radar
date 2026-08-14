@@ -28,6 +28,11 @@ export interface AdminStatusData {
     status: string;
     apiConfigured: boolean;
   };
+  quota?: {
+    today: { requests: number; inputTokens: number; outputTokens: number; errors: number };
+    last60s: { requests: number };
+    byModel: Array<{ model: string; requests: number; inputTokens: number; outputTokens: number }>;
+  };
   stats: SystemStats;
   dataSummary: {
     totalSignals: number;
@@ -334,23 +339,16 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                   <Key className="w-3.5 h-3.5 text-[#F59E0B]" />
                   <span>ADMIN_TOKEN</span>
                 </label>
-                <button
-                  type="button"
-                  onClick={() => setInputToken('hush_admin_secret_token_2026')}
-                  className="text-[10px] font-mono-code text-[#10B981] hover:underline cursor-pointer"
-                >
-                  填入默认 Token
-                </button>
               </div>
               <input
                 type="password"
                 value={inputToken}
                 onChange={(e) => setInputToken(e.target.value)}
-                placeholder="Enter ADMIN_TOKEN (e.g. hush_admin_secret_token_2026)"
+                placeholder="Enter ADMIN_TOKEN from server .env"
                 className="w-full px-3 py-2 bg-[#0B0D10] border border-[#1E232D] focus:border-[#10B981] rounded text-xs font-mono-code text-white placeholder-[#4B5563] outline-none transition-all"
               />
               <p className="mt-1 text-[10px] font-mono-code text-[#6B7280]">
-                默认凭证: <code className="text-[#10B981]">hush_admin_secret_token_2026</code>
+                凭证仅存储在您的 .env 文件中，服务端不会提供默认口令。
               </p>
             </div>
 
@@ -392,6 +390,9 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
   const system = statusData?.system;
   const gemini = statusData?.gemini;
   const summary = statusData?.dataSummary;
+  const quota = statusData?.quota;
+  const today = quota?.today;
+  const todayTokens = (today?.inputTokens || 0) + (today?.outputTokens || 0);
 
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto w-full">
@@ -606,7 +607,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
             <div className="space-y-1.5 text-xs font-mono-code">
               <div className="flex justify-between border-b border-[#1E232D] pb-1">
                 <span className="text-[#6B7280]">Target Model:</span>
-                <span className="text-[#F59E0B] font-semibold">{gemini?.model || 'gemini-2.5-flash'}</span>
+                <span className="text-[#F59E0B] font-semibold">{gemini?.model || 'gemini-3.1-flash-lite'}</span>
               </div>
               <div className="flex justify-between border-b border-[#1E232D] pb-1">
                 <span className="text-[#6B7280]">GEMINI_API_KEY:</span>
@@ -629,6 +630,49 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                   <Zap className={`w-3 h-3 ${isPingingGemini ? 'animate-bounce' : ''}`} />
                   <span>{isPingingGemini ? 'Pinging...' : 'PING GEMINI API'}</span>
                 </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Card 3b: Gemini Quota Usage */}
+          <div className="bg-[#12151B] border border-[#1E232D] rounded-lg p-4 space-y-3">
+            <div className="flex items-center justify-between text-xs font-mono-code text-[#6B7280] font-semibold uppercase tracking-wider">
+              <span className="flex items-center gap-1.5 text-white">
+                <Activity className="w-4 h-4 text-[#06B6D4]" />
+                Gemini 配额用量
+              </span>
+              <span className="px-1.5 py-0.5 rounded text-[10px] bg-[#06B6D4]/15 text-[#06B6D4] font-bold">
+                {today ? `${today.requests} REQ` : '---'}
+              </span>
+            </div>
+            <div className="space-y-1.5 text-xs font-mono-code">
+              <div className="flex justify-between border-b border-[#1E232D] pb-1">
+                <span className="text-[#6B7280]">今日请求:</span>
+                <span className="text-white font-semibold">{today?.requests ?? '---'}</span>
+              </div>
+              <div className="flex justify-between border-b border-[#1E232D] pb-1">
+                <span className="text-[#6B7280]">今日 Token:</span>
+                <span className="text-[#10B981] font-semibold">
+                  {today ? `${todayTokens.toLocaleString()}` : '---'}
+                </span>
+              </div>
+              <div className="flex justify-between border-b border-[#1E232D] pb-1">
+                <span className="text-[#6B7280]">入/出 Token:</span>
+                <span className="text-[#9CA3AF]">
+                  {today ? `${(today.inputTokens || 0).toLocaleString()} / ${(today.outputTokens || 0).toLocaleString()}` : '---'}
+                </span>
+              </div>
+              <div className="flex justify-between border-b border-[#1E232D] pb-1">
+                <span className="text-[#6B7280]">近 60s 请求:</span>
+                <span className={quota?.last60s && quota.last60s.requests > 5 ? 'text-[#EF4444] font-semibold' : 'text-[#9CA3AF]'}>
+                  {quota?.last60s?.requests ?? '---'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[#6B7280]">失败次数:</span>
+                <span className={today && today.errors > 0 ? 'text-[#EF4444] font-semibold' : 'text-[#9CA3AF]'}>
+                  {today?.errors ?? '---'}
+                </span>
               </div>
             </div>
           </div>

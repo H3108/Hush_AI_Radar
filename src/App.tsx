@@ -96,11 +96,17 @@ export function App() {
         setModelsPapers(mpData.items || []);
       }
 
-      // 6. Review Queue
-      const revRes = await fetch('/api/review-queue');
-      if (revRes.ok) {
-        const revData = await revRes.json();
-        setPendingSignals(revData.pendingSignals || []);
+      // 6. Review Queue (admin-only; silently skip if unauthenticated)
+      const adminToken = sessionStorage.getItem('hush_admin_session_token') || '';
+      if (adminToken) {
+        const revRes = await fetch('/api/review-queue', {
+          headers: { 'Authorization': `Bearer ${adminToken}` },
+          credentials: 'include'
+        });
+        if (revRes.ok) {
+          const revData = await revRes.json();
+          setPendingSignals(revData.pendingSignals || []);
+        }
       }
 
       // 7. Sources
@@ -132,11 +138,19 @@ export function App() {
     setActiveTab('stream');
   };
 
-  // Handle Manual Radar Scan Pipeline
+  // Handle Manual Radar Scan Pipeline (admin-only; silently ignore unauthenticated)
   const handleTriggerSync = async () => {
     setIsSyncing(true);
     try {
-      const res = await fetch('/api/sync', { method: 'POST' });
+      const adminToken = sessionStorage.getItem('hush_admin_session_token') || '';
+      const res = await fetch('/api/admin/sync', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(adminToken ? { 'Authorization': `Bearer ${adminToken}` } : {})
+        },
+        credentials: 'include'
+      });
       if (res.ok) {
         await fetchData();
       }
@@ -150,9 +164,14 @@ export function App() {
   // Handle Review Queue Action (Approve / Reject)
   const handleReviewAction = async (id: string, action: 'approve' | 'reject') => {
     try {
+      const adminToken = sessionStorage.getItem('hush_admin_session_token') || '';
       const res = await fetch(`/api/review-queue/${id}/action`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(adminToken ? { 'Authorization': `Bearer ${adminToken}` } : {})
+        },
+        credentials: 'include',
         body: JSON.stringify({ action })
       });
       if (res.ok) {
@@ -167,9 +186,14 @@ export function App() {
   const handleGenerateBrief = async () => {
     setIsGeneratingBrief(true);
     try {
+      const adminToken = sessionStorage.getItem('hush_admin_session_token') || '';
       const res = await fetch('/api/daily/generate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(adminToken ? { 'Authorization': `Bearer ${adminToken}` } : {})
+        },
+        credentials: 'include',
         body: JSON.stringify({ lang: language })
       });
       if (res.ok) {
