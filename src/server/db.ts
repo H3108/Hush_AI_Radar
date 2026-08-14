@@ -12,7 +12,7 @@ let db: Database | null = null;
 /**
  * Persists the SQLite WASM binary buffer to local disk
  */
-function saveToDisk() {
+export function saveToDisk() {
   if (!db) return;
   try {
     if (!fs.existsSync(DATA_DIR)) {
@@ -27,6 +27,12 @@ function saveToDisk() {
 }
 
 /**
+ * Public alias used by other modules (e.g. clustering in pipeline.ts)
+ * that need to persist after direct DB writes.
+ */
+export const saveToDiskPublic = saveToDisk;
+
+/**
  * Initializes the SQLite database engine
  */
 export async function getDb(): Promise<Database> {
@@ -39,6 +45,7 @@ export async function getDb(): Promise<Database> {
       const fileBuffer = fs.readFileSync(DB_FILE);
       db = new SQL.Database(fileBuffer);
       console.log('[Hush Radar DB] Loaded existing SQLite database from disk.');
+      initSchema(db);
       return db;
     } catch (err) {
       console.warn('[Hush Radar DB] Failed to load SQLite file, re-initializing...', err);
@@ -143,7 +150,37 @@ function initSchema(database: Database) {
       status TEXT NOT NULL,
       details TEXT
     );
+
+    CREATE TABLE IF NOT EXISTS api_usage (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      timestamp TEXT NOT NULL,
+      endpoint TEXT NOT NULL,
+      model TEXT NOT NULL,
+      input_tokens INTEGER NOT NULL DEFAULT 0,
+      output_tokens INTEGER NOT NULL DEFAULT 0,
+      status TEXT NOT NULL DEFAULT 'success',
+      attempts INTEGER NOT NULL DEFAULT 1,
+      error_message TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS signal_embeddings (
+      signal_id TEXT PRIMARY KEY,
+      embedding_json TEXT NOT NULL,
+      model TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    );
   `);
+
+  // Indexes for query performance
+  database.run(`CREATE INDEX IF NOT EXISTS idx_signals_review_status ON signals(review_status);`);
+  database.run(`CREATE INDEX IF NOT EXISTS idx_signals_category ON signals(category);`);
+  database.run(`CREATE INDEX IF NOT EXISTS idx_signals_radar_score ON signals(radar_score DESC);`);
+  database.run(`CREATE INDEX IF NOT EXISTS idx_signals_publish_time ON signals(publish_time DESC);`);
+  database.run(`CREATE INDEX IF NOT EXISTS idx_signals_created_at ON signals(created_at DESC);`);
+  database.run(`CREATE INDEX IF NOT EXISTS idx_clusters_hot_score ON event_clusters(hot_score DESC);`);
+  database.run(`CREATE INDEX IF NOT EXISTS idx_daily_briefs_lang_date ON daily_briefs(language, date DESC);`);
+  database.run(`CREATE INDEX IF NOT EXISTS idx_api_usage_timestamp ON api_usage(timestamp DESC);`);
+  database.run(`CREATE INDEX IF NOT EXISTS idx_api_usage_model ON api_usage(model);`);
 
   // Migrations for existing DB files
   try { database.run(`ALTER TABLE signals ADD COLUMN title_en TEXT;`); } catch (_) {}
@@ -876,4 +913,163 @@ export async function logSyncRun(sourcesChecked: number, newSignals: number, sta
     [new Date().toISOString(), sourcesChecked, newSignals, status, details || null]
   );
   saveToDisk();
+}
+
+/* ============================================================================
+ * API USAGE / QUOTA TRACKING
+ * ========================================================================== */
+
+export interface ApiCallRecord {
+  endpoint: string;
+  model: string;
+  input_tokens: number;
+  output_tokens: number;
+  status: 'success' | 'error';
+  attempts: number;
+  error_message: string | null;
+}
+
+/**
+ * Append a single Gemini call record. Persists to disk in batches via the periodic
+ * saver pattern used elsewhere — kept write-per-call for simplicity and durability.
+ */
+export async function logApiCall(rec: ApiCallRecord): Promise<void> {
+  const database = await getDb();
+  database.run(
+    `INSERT INTO api_usage (timestamp, endpoint, model, input_tokens, output_tokens, status, attempts, error_message)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      new Date().toISOString(),
+      rec.endpoint,
+      rec.model,
+      rec.input_tokens,
+      rec.output_tokens,
+      rec.status,
+      rec.attempts,
+      rec.error_message
+    ]
+  );
+  saveToDisk();
+}
+
+/**
+ * Returns aggregated quota statistics for the admin console.
+ * - today: counters reset at UTC midnight
+ * - last60s: requests in the last 60 seconds (RPM proxy)
+ * - byModel: per-model breakdown
+ */
+export async function getQuotaStats(): Promise<{
+  today: { requests: number; inputTokens: number; outputTokens: number; errors: number };
+  last60s: { requests: number };
+  byModel: Array<{ model: string; requests: number; inputTokens: number; outputTokens: number }>;
+}> {
+  const database = await getDb();
+  const todayStr = new Date().toISOString().split('T')[0];
+
+  const todayRes = database.exec(
+    `SELECT
+       COUNT(*) AS requests,
+       COALESCE(SUM(input_tokens), 0) AS input_tokens,
+       COALESCE(SUM(output_tokens), 0) AS output_tokens,
+       SUM(CASE WHEN status = 'error' THEN 1 ELSE 0 END) AS errors
+     FROM api_usage
+     WHERE timestamp >= ?`,
+    [`${todayStr}T00:00:00.000Z`]
+  );
+  const todayRow = todayRes[0]?.values[0];
+
+  const last60sRes = database.exec(
+    `SELECT COUNT(*) AS requests FROM api_usage WHERE timestamp >= ?`,
+    [new Date(Date.now() - 60_000).toISOString()]
+  );
+  const last60s = last60sRes[0]?.values[0]?.[0] as number || 0;
+
+  const byModelRes = database.exec(
+    `SELECT model,
+            COUNT(*) AS requests,
+            COALESCE(SUM(input_tokens), 0) AS input_tokens,
+            COALESCE(SUM(output_tokens), 0) AS output_tokens
+     FROM api_usage
+     WHERE timestamp >= ?
+     GROUP BY model
+     ORDER BY requests DESC`,
+    [`${todayStr}T00:00:00.000Z`]
+  );
+  const byModel = (byModelRes[0]?.values || []).map((row) => ({
+    model: String(row[0]),
+    requests: Number(row[1]),
+    inputTokens: Number(row[2]),
+    outputTokens: Number(row[3])
+  }));
+
+  return {
+    today: {
+      requests: Number(todayRow?.[0] || 0),
+      inputTokens: Number(todayRow?.[1] || 0),
+      outputTokens: Number(todayRow?.[2] || 0),
+      errors: Number(todayRow?.[3] || 0)
+    },
+    last60s: { requests: last60s },
+    byModel
+  };
+}
+
+/* ============================================================================
+ * DEDUPLICATION HELPERS (used by pipeline)
+ * ========================================================================== */
+
+/**
+ * Returns the set of existing signal IDs that match the provided candidate IDs.
+ * This lets the pipeline deduplicate in O(log n) per batch instead of O(n²)
+ * full-table scans per item.
+ */
+export async function getExistingSignalIds(candidateIds: string[]): Promise<Set<string>> {
+  if (candidateIds.length === 0) return new Set();
+  const database = await getDb();
+  const placeholders = candidateIds.map(() => '?').join(',');
+  const res = database.exec(
+    `SELECT id FROM signals WHERE id IN (${placeholders})`,
+    candidateIds
+  );
+  if (!res || res.length === 0) return new Set();
+  return new Set(res[0].values.map((row) => String(row[0])));
+}
+
+/* ============================================================================
+ * EMBEDDING STORAGE (used by clustering)
+ * ========================================================================== */
+
+/**
+ * Persist a signal's embedding so we don't recompute it each scan.
+ */
+export async function saveEmbedding(signalId: string, embedding: number[], model: string): Promise<void> {
+  const database = await getDb();
+  database.run(
+    `INSERT OR REPLACE INTO signal_embeddings (signal_id, embedding_json, model, created_at)
+     VALUES (?, ?, ?, ?)`,
+    [signalId, JSON.stringify(embedding), model, new Date().toISOString()]
+  );
+  saveToDisk();
+}
+
+/**
+ * Fetch all embeddings for the given signal IDs in a single query.
+ */
+export async function getEmbeddings(signalIds: string[]): Promise<Map<string, number[]>> {
+  const out = new Map<string, number[]>();
+  if (signalIds.length === 0) return out;
+  const database = await getDb();
+  const placeholders = signalIds.map(() => '?').join(',');
+  const res = database.exec(
+    `SELECT signal_id, embedding_json FROM signal_embeddings WHERE signal_id IN (${placeholders})`,
+    signalIds
+  );
+  if (!res || res.length === 0) return out;
+  for (const row of res[0].values) {
+    try {
+      const arr = JSON.parse(String(row[1]));
+      if (Array.isArray(arr)) out.set(String(row[0]), arr);
+    } catch (_) {}
+  }
+  return out;
 }

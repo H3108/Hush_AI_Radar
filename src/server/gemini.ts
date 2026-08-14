@@ -1,7 +1,13 @@
 import { GoogleGenAI, Type } from '@google/genai';
 import { DailyBrief, DailyBriefSection, EventCluster, Signal, Source } from '../types';
+import { logApiCall, getQuotaStats } from './db';
 
 export const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite';
+const EMBEDDING_MODEL = process.env.GEMINI_EMBEDDING_MODEL || 'gemini-embedding-001';
+
+const MAX_RETRIES = 4;
+const INITIAL_BACKOFF_MS = 800;
+const MAX_BACKOFF_MS = 8000;
 
 let genAIClient: GoogleGenAI | null = null;
 
@@ -23,6 +29,77 @@ function getGenAI(): GoogleGenAI | null {
   return genAIClient;
 }
 
+/**
+ * Detects transient errors that are safe to retry with exponential backoff.
+ * Gemini typically returns 429 (quota), 500/503 (overloaded/unavailable).
+ */
+function isRetryableError(err: any): boolean {
+  if (!err) return false;
+  const msg = (err?.message || String(err) || '').toLowerCase();
+  const status = err?.status || '';
+  if (status === 429 || status === 503 || status === 500) return true;
+  if (msg.includes('429') || msg.includes('503') || msg.includes('500')) return true;
+  if (msg.includes('rate limit') || msg.includes('overload') || msg.includes('currently experiencing high demand')) return true;
+  if (msg.includes('temporary') || msg.includes('try again')) return true;
+  return false;
+}
+
+async function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
+ * Wraps any Gemini call with exponential backoff retry for transient failures.
+ * Backoff sequence: 800ms, 1600ms, 3200ms, 6400ms (capped), then throws.
+ */
+async function withRetry<T>(
+  operation: () => Promise<T>,
+  context: string,
+  recordUsage: (result: T) => { inputTokens?: number; outputTokens?: number; model?: string } = () => ({}),
+  attempt = 1
+): Promise<T> {
+  try {
+    const result = await operation();
+    const usage = recordUsage(result);
+    if (usage.inputTokens !== undefined || usage.outputTokens !== undefined) {
+      try {
+        await logApiCall({
+          endpoint: context,
+          model: usage.model || GEMINI_MODEL,
+          input_tokens: usage.inputTokens || 0,
+          output_tokens: usage.outputTokens || 0,
+          status: 'success',
+          attempts: attempt,
+          error_message: null
+        });
+      } catch (logErr) {
+        console.warn('[Hush Radar Gemini] Usage log write failed (non-fatal):', logErr);
+      }
+    }
+    return result;
+  } catch (err: any) {
+    if (attempt >= MAX_RETRIES || !isRetryableError(err)) {
+      try {
+        await logApiCall({
+          endpoint: context,
+          model: GEMINI_MODEL,
+          input_tokens: 0,
+          output_tokens: 0,
+          status: 'error',
+          attempts: attempt,
+          error_message: err?.message || String(err)
+        });
+      } catch (_) {}
+      throw err;
+    }
+    const backoff = Math.min(MAX_BACKOFF_MS, INITIAL_BACKOFF_MS * Math.pow(2, attempt - 1));
+    const jitter = Math.floor(Math.random() * 200);
+    console.warn(`[Hush Radar Gemini] Retryable error on "${context}" (attempt ${attempt}/${MAX_RETRIES}). Backing off ${backoff + jitter}ms. Cause: ${err?.message || err}`);
+    await sleep(backoff + jitter);
+    return withRetry(operation, context, recordUsage, attempt + 1);
+  }
+}
+
 export interface AnalysisResult {
   title_zh: string;
   title_en: string;
@@ -36,13 +113,12 @@ export interface AnalysisResult {
 }
 
 /**
- * Uses Gemini 3.6 Flash to translate into dual languages (CN & EN), summarize, and rate AI impact & confidence score
+ * Uses Gemini to translate into dual languages (CN & EN), summarize, and rate AI impact & confidence score
  */
 export async function analyzeRawSignal(titleRaw: string, contentRaw: string, sourceName: string): Promise<AnalysisResult> {
   const ai = getGenAI();
 
   if (!ai) {
-    // Intelligent heuristic fallback if Gemini API Key not set
     const isChinese = /[\u4e00-\u9fa5]/.test(titleRaw);
     const titleZh = isChinese ? titleRaw : `[AI情报] ${titleRaw}`;
     const titleEn = titleRaw;
@@ -74,31 +150,39 @@ Tasks:
 7. If confidence < 65 or if claims are unverifiable/marketing hype, set "review_needed": true with a short "review_reason".
 8. Extract 2 to 4 tech tags ("tags", e.g. ["DeepSeek", "LLM", "OpenSource"]).`;
 
-    const response = await ai.models.generateContent({
-      model: GEMINI_MODEL,
-      contents: prompt,
-      config: {
-        responseMimeType: 'application/json',
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            title_zh: { type: Type.STRING },
-            title_en: { type: Type.STRING },
-            summary_zh: { type: Type.STRING },
-            summary_en: { type: Type.STRING },
-            ai_impact_score: { type: Type.NUMBER },
-            confidence_score: { type: Type.NUMBER },
-            review_needed: { type: Type.BOOLEAN },
-            review_reason: { type: Type.STRING },
-            tags: {
-              type: Type.ARRAY,
-              items: { type: Type.STRING }
-            }
-          },
-          required: ['title_zh', 'title_en', 'summary_zh', 'summary_en', 'ai_impact_score', 'confidence_score', 'review_needed', 'tags']
+    const response = await withRetry(
+      () => ai.models.generateContent({
+        model: GEMINI_MODEL,
+        contents: prompt,
+        config: {
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              title_zh: { type: Type.STRING },
+              title_en: { type: Type.STRING },
+              summary_zh: { type: Type.STRING },
+              summary_en: { type: Type.STRING },
+              ai_impact_score: { type: Type.NUMBER },
+              confidence_score: { type: Type.NUMBER },
+              review_needed: { type: Type.BOOLEAN },
+              review_reason: { type: Type.STRING },
+              tags: {
+                type: Type.ARRAY,
+                items: { type: Type.STRING }
+              }
+            },
+            required: ['title_zh', 'title_en', 'summary_zh', 'summary_en', 'ai_impact_score', 'confidence_score', 'review_needed', 'tags']
+          }
         }
-      }
-    });
+      }),
+      'analyzeRawSignal',
+      (r) => ({
+        inputTokens: (r as any)?.usageMetadata?.promptTokenCount,
+        outputTokens: (r as any)?.usageMetadata?.candidatesTokenCount,
+        model: GEMINI_MODEL
+      })
+    );
 
     const text = response.text ? response.text.trim() : '{}';
     const parsed = JSON.parse(text) as AnalysisResult;
@@ -115,7 +199,7 @@ Tasks:
       tags: parsed.tags && parsed.tags.length > 0 ? parsed.tags : ['AI', 'Radar']
     };
   } catch (err) {
-    console.error('[Hush Radar Gemini] Analysis failed:', err);
+    console.error('[Hush Radar Gemini] Analysis failed after retries:', err);
     return {
       title_zh: titleRaw,
       title_en: titleRaw,
@@ -130,7 +214,7 @@ Tasks:
 }
 
 /**
- * Synthesizes Daily Brief using Gemini 3.6 Flash in specified language (zh-CN or en)
+ * Synthesizes Daily Brief using Gemini in specified language (zh-CN or en)
  */
 export async function synthesizeDailyBrief(signals: Signal[], lang: 'zh-CN' | 'en' = 'zh-CN'): Promise<Partial<DailyBrief>> {
   const todayStr = new Date().toISOString().split('T')[0];
@@ -180,26 +264,33 @@ export async function synthesizeDailyBrief(signals: Signal[], lang: 'zh-CN' | 'e
 
     const prompt = `You are Hush AI Radar's chief editor. Synthesize a professional Daily Intelligence Brief for date ${todayStr} in ${lang === 'en' ? 'English' : 'Chinese'} based on these top AI signals:\n${signalSummaryText}\n\nLanguage requirement: ${langInstructions}\n\nTasks:\n1. Create a punchy, executive-level headline.\n2. Write a 2-sentence executive_summary.\n3. Output full clean markdown_content formatted with radar styling (# 📡 Hush AI Radar · Daily Brief...).`;
 
-    const response = await ai.models.generateContent({
-      model: GEMINI_MODEL,
-      contents: prompt,
-      config: {
-        responseMimeType: 'application/json',
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            headline: { type: Type.STRING },
-            executive_summary: { type: Type.STRING },
-            markdown_content: { type: Type.STRING }
-          },
-          required: ['headline', 'executive_summary', 'markdown_content']
+    const response = await withRetry(
+      () => ai.models.generateContent({
+        model: GEMINI_MODEL,
+        contents: prompt,
+        config: {
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              headline: { type: Type.STRING },
+              executive_summary: { type: Type.STRING },
+              markdown_content: { type: Type.STRING }
+            },
+            required: ['headline', 'executive_summary', 'markdown_content']
+          }
         }
-      }
-    });
+      }),
+      'synthesizeDailyBrief',
+      (r) => ({
+        inputTokens: (r as any)?.usageMetadata?.promptTokenCount,
+        outputTokens: (r as any)?.usageMetadata?.candidatesTokenCount,
+        model: GEMINI_MODEL
+      })
+    );
 
     const parsed = JSON.parse(response.text || '{}');
 
-    // Group top signals into sections
     const giantsItems = topSignals.filter(s => s.category === 'giants' || s.category === 'media');
     const openSourceItems = topSignals.filter(s => s.category === 'opensource' || s.category === 'product');
     const paperItems = topSignals.filter(s => s.category === 'paper');
@@ -230,7 +321,7 @@ export async function synthesizeDailyBrief(signals: Signal[], lang: 'zh-CN' | 'e
       generated_at: new Date().toISOString()
     };
   } catch (err) {
-    console.error('[Hush Radar Gemini] Daily Brief synthesis error:', err);
+    console.error('[Hush Radar Gemini] Daily Brief synthesis error after retries:', err);
     return {
       id: `${todayStr}-${lang}`,
       date: todayStr,
@@ -242,4 +333,73 @@ export async function synthesizeDailyBrief(signals: Signal[], lang: 'zh-CN' | 'e
       generated_at: new Date().toISOString()
     };
   }
+}
+
+/**
+ * Generate semantic embedding for a piece of text (used for clustering).
+ * Returns a Float32 vector. Falls back to null when API unavailable.
+ */
+export async function embedText(text: string, context = 'clustering'): Promise<number[] | null> {
+  const ai = getGenAI();
+  if (!ai) return null;
+  if (!text || text.trim().length === 0) return null;
+
+  try {
+    const response = await withRetry(
+      () => ai.models.embedContent({
+        model: EMBEDDING_MODEL,
+        contents: text.slice(0, 2000),
+        config: { taskType: 'CLUSTERING' as any }
+      }),
+      `embedText:${context}`,
+      (r) => ({
+        inputTokens: (r as any)?.usageMetadata?.promptTokenCount,
+        outputTokens: 0,
+        model: EMBEDDING_MODEL
+      })
+    );
+    // Response shape: SDK returns { embeddings: [{ values }] } even for a single string
+    // (older SDK versions exposed a single `embedding` field). Handle both.
+    const embArray = (response as any)?.embeddings as Array<{ values?: number[] }> | undefined;
+    const singleEmb = (response as any)?.embedding as { values?: number[] } | undefined;
+    const embedding = embArray && embArray.length > 0 ? embArray[0]?.values : singleEmb?.values;
+    if (Array.isArray(embedding) && embedding.length > 0) {
+      return embedding as number[];
+    }
+    return null;
+  } catch (err) {
+    console.warn(`[Hush Radar Gemini] Embedding failed for "${context}":`, err?.message || err);
+    return null;
+  }
+}
+
+/**
+ * Cosine similarity between two equal-length vectors.
+ */
+export function cosineSimilarity(a: number[], b: number[]): number {
+  if (!a || !b || a.length !== b.length || a.length === 0) return 0;
+  let dot = 0;
+  let magA = 0;
+  let magB = 0;
+  for (let i = 0; i < a.length; i++) {
+    const av = a[i];
+    const bv = b[i];
+    dot += av * bv;
+    magA += av * av;
+    magB += bv * bv;
+  }
+  const denom = Math.sqrt(magA) * Math.sqrt(magB);
+  if (denom === 0) return 0;
+  return dot / denom;
+}
+
+/**
+ * Public helper used by admin endpoints to surface live quota data.
+ */
+export async function getQuotaSnapshot(): Promise<{
+  today: { requests: number; inputTokens: number; outputTokens: number; errors: number };
+  last60s: { requests: number };
+  byModel: Array<{ model: string; requests: number; inputTokens: number; outputTokens: number }>;
+}> {
+  return getQuotaStats();
 }
