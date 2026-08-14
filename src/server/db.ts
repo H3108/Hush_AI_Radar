@@ -844,6 +844,56 @@ export async function getLatestDailyBrief(lang?: string, type: 'daily' | 'weekly
   };
 }
 
+export async function listDailyBriefs(lang?: string, type: 'daily' | 'weekly' | 'monthly' = 'daily', limit = 10): Promise<{ id: string; date: string; language: string; brief_type: string; headline: string; generated_at: string }[]> {
+  const database = await getDb();
+  let sql = 'SELECT id, date, language, brief_type, headline, generated_at FROM daily_briefs WHERE brief_type = ?';
+  const params: any[] = [type];
+  if (lang) {
+    sql += ' AND language = ?';
+    params.push(lang);
+  }
+  sql += ' ORDER BY date DESC, generated_at DESC LIMIT ?';
+  params.push(limit);
+
+  const res = database.exec(sql, params);
+  if (!res || res.length === 0) return [];
+
+  return res[0].values.map((row) => {
+    const obj: any = {};
+    res[0].columns.forEach((col, idx) => { obj[col] = row[idx]; });
+    return {
+      id: obj.id,
+      date: obj.date,
+      language: obj.language || 'zh-CN',
+      brief_type: obj.brief_type || type,
+      headline: obj.headline || '',
+      generated_at: obj.generated_at
+    };
+  });
+}
+
+export async function getDailyBriefById(id: string): Promise<DailyBrief | null> {
+  const database = await getDb();
+  const res = database.exec('SELECT * FROM daily_briefs WHERE id = ? LIMIT 1', [id]);
+  if (!res || res.length === 0) return null;
+
+  const columns = res[0].columns;
+  const obj: any = {};
+  columns.forEach((col, idx) => { obj[col] = res[0].values[0][idx]; });
+
+  return {
+    id: obj.id,
+    date: obj.date,
+    language: obj.language || 'zh-CN',
+    brief_type: obj.brief_type || 'daily',
+    headline: obj.headline,
+    executive_summary: obj.executive_summary,
+    sections: JSON.parse(obj.sections_json || '[]'),
+    markdown_content: obj.markdown_content,
+    generated_at: obj.generated_at
+  };
+}
+
 export async function saveDailyBrief(brief: DailyBrief): Promise<void> {
   const database = await getDb();
   const briefLang = brief.language || 'zh-CN';

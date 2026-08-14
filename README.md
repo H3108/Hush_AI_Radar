@@ -8,7 +8,8 @@ Zero-noise real-time AI intelligence radar — monitors breakthrough LLMs, ArXiv
 - **Gemini 智能分析** — 每条信号经 Gemini 进行中英文标题润色、双语摘要、AI 影响力评分、置信度评分、自动打标。
 - **语义聚类** — 使用 Gemini Embedding 计算语义相似度，将相近情报（余弦相似度 ≥ 0.78）自动聚合为事件簇 (Event Clusters)，聚类窗口覆盖近 28 天历史信号。
 - **人工审核队列** — 低置信度信号进入 Review Queue，管理员批准/驳回（仅管理员可操作）。
-- **智能简报（日报/周报/月报）** — Gemini 聚合对应周期 Top 信号与事件簇生成中/英文简报；周报每周日 23:55 UTC、月报每月 1 日 23:55 UTC 自动生成。
+- **智能简报（日报/周报/月报）** — Gemini 聚合对应周期 Top 信号与事件簇生成中/英文简报；周报每周日 23:55 UTC、月报每月 1 日 23:55 UTC 自动生成，支持按日期浏览历史简报。
+- **全局搜索 (⌘K / Ctrl+K)** — Header 搜索框跨 信号 / 事件簇 / 模型库 全局匹配，键盘 ↑↓ + Enter 直接跳转到对应视图。
 - **管理员控制台** — 系统状态、数据源健康、Gemini 配额用量、日志、同步控制、一键生成简报。
 - **Agent API v1** — 面向 AI Agent 的稳定只读 API + RSS 2.0 输出。
 
@@ -106,6 +107,8 @@ npm run dev:local   # 已内置 HTTP_PROXY=http://127.0.0.1:7897
 | GET | `/api/signals` | 信号流（`category` / `search` / `minScore` / `reviewStatus` / `limit`） |
 | GET | `/api/clusters` | 语义事件簇 |
 | GET | `/api/daily/latest?lang=zh-CN&type=daily` | 最新简报（`type`：`daily` / `weekly` / `monthly`，缺失时自动生成） |
+| GET | `/api/daily/history?lang=zh-CN&type=daily&limit=10` | 指定类型简报历史列表（date / headline） |
+| GET | `/api/daily/:id` | 按 ID 获取单篇简报 |
 | GET | `/api/models-papers` | 模型与论文 |
 | GET | `/api/sources` | 数据源列表 |
 | GET | `/rss.xml` | RSS 2.0 输出 |

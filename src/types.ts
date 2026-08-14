@@ -87,6 +87,15 @@ export interface DailyBrief {
   generated_at: string;
 }
 
+export interface BriefHistoryItem {
+  id: string;
+  date: string;
+  language: string;
+  brief_type: string;
+  headline: string;
+  generated_at: string;
+}
+
 export interface ModelPaperItem {
   id: string;
   name: string;

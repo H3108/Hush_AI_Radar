@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { ExternalLink, Flame, ShieldCheck, Zap } from 'lucide-react';
-import { Signal } from '../types';
+import { ChevronDown, ChevronRight, ExternalLink, Flame, Link2, ShieldCheck, Zap } from 'lucide-react';
+import { EventCluster, Signal } from '../types';
 import { useLanguage } from '../i18n/LanguageContext';
 
 interface SignalFeedProps {
@@ -10,6 +10,8 @@ interface SignalFeedProps {
   minScoreFilter: number;
   onMinScoreChange: (score: number) => void;
   isLoading: boolean;
+  clusters?: EventCluster[];
+  onOpenCluster?: (clusterId: string) => void;
 }
 
 export const SignalFeed: React.FC<SignalFeedProps> = ({
@@ -18,10 +20,15 @@ export const SignalFeed: React.FC<SignalFeedProps> = ({
   onSelectCategory,
   minScoreFilter,
   onMinScoreChange,
-  isLoading
+  isLoading,
+  clusters = [],
+  onOpenCluster
 }) => {
   const [activeTooltipId, setActiveTooltipId] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const { language, t } = useLanguage();
+
+  const clusterById = new Map(clusters.map((c) => [c.id, c]));
 
   const categories: { id: string; label: string }[] = [
     { id: 'all', label: t.allSignals },
@@ -159,17 +166,25 @@ export const SignalFeed: React.FC<SignalFeedProps> = ({
 
                 {/* Center: Title & Summary */}
                 <div className="flex-1 min-w-0 space-y-1">
-                  <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    onClick={() => setExpandedId(expandedId === sig.id ? null : sig.id)}
+                    className="w-full text-left flex items-center gap-1.5 group/title cursor-pointer"
+                  >
+                    {expandedId === sig.id ? (
+                      <ChevronDown className="w-3.5 h-3.5 text-[#10B981] flex-shrink-0" />
+                    ) : (
+                      <ChevronRight className="w-3.5 h-3.5 text-[#6B7280] group-hover/title:text-[#10B981] flex-shrink-0" />
+                    )}
                     <span className="text-sm font-semibold text-white tracking-wide font-sans group-hover:text-[#10B981] transition-colors leading-snug">
                       {displayTitle}
                     </span>
-                  </div>
+                  </button>
 
-                  <p className="text-xs text-[#9CA3AF] leading-relaxed line-clamp-2">
+                  <p className="text-xs text-[#9CA3AF] leading-relaxed line-clamp-2 pl-5">
                     {displaySummary}
                   </p>
 
-                  <div className="flex items-center gap-2 pt-1 flex-wrap">
+                  <div className="flex items-center gap-2 pt-1 flex-wrap pl-5">
                     <span className="text-[10px] font-mono-code px-1.5 py-0.5 rounded bg-[#1E232D] text-[#9CA3AF] border border-[#2B3545]">
                       {sig.source_name}
                     </span>
@@ -180,6 +195,50 @@ export const SignalFeed: React.FC<SignalFeedProps> = ({
                       </span>
                     ))}
                   </div>
+
+                  {/* Expanded Detail Panel */}
+                  {expandedId === sig.id && (
+                    <div className="mt-2 pl-5 pt-3 border-t border-[#1E232D] space-y-2.5">
+                      {sig.cluster_id && (() => {
+                        const cluster = clusterById.get(sig.cluster_id);
+                        return cluster ? (
+                          <button
+                            onClick={() => onOpenCluster?.(cluster.id)}
+                            className="flex items-center gap-2 px-2.5 py-1.5 rounded bg-[#10B981]/10 border border-[#10B981]/30 text-[#10B981] text-xs font-mono-code hover:bg-[#10B981]/20 transition-colors cursor-pointer"
+                          >
+                            <Link2 className="w-3.5 h-3.5" />
+                            {language === 'en' && cluster.title_en ? `Cluster: ${cluster.title_en}` : `关联事件簇: ${cluster.title}`}
+                            <span className="text-[10px] text-[#9CA3AF]">({cluster.related_signal_ids.length} signals)</span>
+                          </button>
+                        ) : null;
+                      })()}
+
+                      {sig.raw_content && (
+                        <div className="rounded bg-[#0B0D10] border border-[#1E232D] p-3">
+                          <div className="text-[10px] font-mono-code text-[#6B7280] uppercase tracking-wider mb-1.5 flex items-center justify-between">
+                            <span>RAW CONTENT</span>
+                            <button
+                              onClick={() => setExpandedId(null)}
+                              className="text-[#9CA3AF] hover:text-white cursor-pointer"
+                            >
+                              {t.collapse}
+                            </button>
+                          </div>
+                          <p className="text-xs text-[#D1D5DB] leading-relaxed whitespace-pre-line line-clamp-6">
+                            {sig.raw_content.length > 600 ? `${sig.raw_content.slice(0, 600)}…` : sig.raw_content}
+                          </p>
+                        </div>
+                      )}
+
+                      <div className="flex flex-wrap items-center gap-3 text-[10px] font-mono-code text-[#6B7280]">
+                        <span>{t.freshness}: {sig.score_breakdown.freshness_score}</span>
+                        <span>{t.aiImpact}: {sig.score_breakdown.ai_impact_score}</span>
+                        <span>{t.communitySignal}: {sig.score_breakdown.community_signal}</span>
+                        <span>{t.sourceAuth}: {sig.score_breakdown.source_authority}</span>
+                        <span>Publish: {new Date(sig.publish_time).toLocaleString()}</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Right: Actions & External Link */}

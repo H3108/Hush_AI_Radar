@@ -83,6 +83,10 @@ export interface Translations {
   aiImpact: string;
   communitySignal: string;
   sourceLink: string;
+  collapse: string;
+  rawContent: string;
+  briefHistory: string;
+  noHistory: string;
   queryingDb: string;
   noSignalsFound: string;
 
@@ -237,6 +241,10 @@ export const translations: Record<Language, Translations> = {
     aiImpact: 'AI 突破影响 (25%)',
     communitySignal: '社区关注度 (10%)',
     sourceLink: '原文直达',
+    collapse: '收起',
+    rawContent: '原始内容',
+    briefHistory: '历史简报',
+    noHistory: '暂无历史简报，生成后自动归档',
     queryingDb: '正在查询 SQLite 雷达数据库...',
     noSignalsFound: '未找到符合当前筛选条件的 AI 情报。',
 
@@ -389,6 +397,10 @@ export const translations: Record<Language, Translations> = {
     aiImpact: 'AI Impact (25%)',
     communitySignal: 'Community Signal (10%)',
     sourceLink: 'Source',
+    collapse: 'Close',
+    rawContent: 'Raw Content',
+    briefHistory: 'Brief History',
+    noHistory: 'No historical briefs yet — they auto-archive on generation',
     queryingDb: 'Querying SQLite Radar Database...',
     noSignalsFound: 'No intelligence signals match current filter criteria.',
 

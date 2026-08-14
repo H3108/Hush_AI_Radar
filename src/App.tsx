@@ -44,6 +44,7 @@ export function App() {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [minScoreFilter, setMinScoreFilter] = useState<number>(0);
   const [searchTerm, setSearchTerm] = useState<string>('');
+  const [highlightedClusterId, setHighlightedClusterId] = useState<string | null>(null);
 
   const [stats, setStats] = useState<SystemStats | null>(null);
   const [signals, setSignals] = useState<Signal[]>([]);
@@ -234,6 +235,18 @@ export function App() {
     }
   };
 
+  // Handle Global Search Navigation from Header (Cmd+K panel)
+  const handleGlobalNavigate = (tab: ActiveTab, term: string) => {
+    handleTabChange(tab);
+    if (term && term !== searchTerm) setSearchTerm(term);
+  };
+
+  // Jump from a signal card to its parent event cluster (highlight it)
+  const handleOpenCluster = (clusterId: string) => {
+    setHighlightedClusterId(clusterId);
+    handleTabChange('clusters');
+  };
+
   return (
     <div className="min-h-screen bg-[#0B0D10] text-white flex flex-col font-sans selection:bg-[#10B981]/30 selection:text-[#10B981]">
       {/* Top Header */}
@@ -241,6 +254,8 @@ export function App() {
         stats={stats}
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
+        globalResults={{ signals, clusters, models: modelsPapers }}
+        onNavigate={handleGlobalNavigate}
       />
 
       {/* Main Workspace Layout (Sidebar + Active View) */}
@@ -275,12 +290,14 @@ export function App() {
                 minScoreFilter={minScoreFilter}
                 onMinScoreChange={setMinScoreFilter}
                 isLoading={isLoading}
+                clusters={clusters}
+                onOpenCluster={handleOpenCluster}
               />
             </>
           )}
 
           {activeTab === 'clusters' && (
-            <EventClustersView clusters={clusters} isLoading={isLoading} />
+            <EventClustersView clusters={clusters} isLoading={isLoading} highlightId={highlightedClusterId} />
           )}
 
           {activeTab === 'daily' && (

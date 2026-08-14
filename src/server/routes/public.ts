@@ -1,11 +1,13 @@
 import express from 'express';
 import {
   getClusters,
+  getDailyBriefById,
   getLatestDailyBrief,
   getModelsPapers,
   getSignals,
   getSourcesFromDb,
   getSystemStats,
+  listDailyBriefs,
   saveDailyBrief
 } from '../db';
 import { GEMINI_MODEL, synthesizeDailyBrief, synthesizePeriodicBrief } from '../gemini';
@@ -88,6 +90,29 @@ export function createPublicRouter(): express.Router {
       const errMsg = err?.message || String(err) || 'Daily brief retrieval failed';
       addPipelineLog('error', `[Daily Brief Error] ${errMsg}`);
       res.status(500).json({ error: errMsg });
+    }
+  });
+
+  // 4b. Brief history list (id, date, headline only)
+  router.get('/api/daily/history', async (req, res) => {
+    try {
+      const lang = (req.query.lang as 'zh-CN' | 'en') || 'zh-CN';
+      const type = (req.query.type as 'daily' | 'weekly' | 'monthly') || 'daily';
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
+      const items = await listDailyBriefs(lang, type, limit);
+      res.json({ count: items.length, items });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // 4c. Fetch a specific brief by id
+  router.get('/api/daily/:id', async (req, res) => {
+    try {
+      const brief = await getDailyBriefById(req.params.id);
+      res.json(brief || null);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
     }
   });
 

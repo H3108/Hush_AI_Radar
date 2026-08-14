@@ -6,9 +6,10 @@ import { useLanguage } from '../i18n/LanguageContext';
 interface EventClustersViewProps {
   clusters: EventCluster[];
   isLoading: boolean;
+  highlightId?: string | null;
 }
 
-export const EventClustersView: React.FC<EventClustersViewProps> = ({ clusters, isLoading }) => {
+export const EventClustersView: React.FC<EventClustersViewProps> = ({ clusters, isLoading, highlightId }) => {
   const { language, t } = useLanguage();
 
   return (
@@ -47,7 +48,13 @@ export const EventClustersView: React.FC<EventClustersViewProps> = ({ clusters, 
             return (
               <div
                 key={cluster.id}
-                className="bg-[#12151B] border border-[#1E232D] hover:border-[#3B82F6]/50 p-4 rounded space-y-3 transition-all"
+                id={`cluster-${cluster.id}`}
+                className={`bg-[#12151B] border p-4 rounded space-y-3 transition-all ${
+                  highlightId === cluster.id
+                    ? 'border-[#10B981] shadow-[0_0_0_1px_#10B981,0_0_20px_rgba(16,185,129,0.15)]'
+                    : 'border-[#1E232D] hover:border-[#3B82F6]/50'
+                }`}
+                ref={highlightId === cluster.id ? (el) => el?.scrollIntoView({ behavior: 'smooth', block: 'center' }) : undefined}
               >
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <div className="flex items-center gap-2">
