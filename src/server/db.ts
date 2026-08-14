@@ -122,6 +122,7 @@ function initSchema(database: Database) {
       id TEXT PRIMARY KEY,
       date TEXT NOT NULL,
       language TEXT DEFAULT 'zh-CN',
+      brief_type TEXT DEFAULT 'daily',
       headline TEXT NOT NULL,
       executive_summary TEXT NOT NULL,
       sections_json TEXT NOT NULL,
@@ -188,6 +189,7 @@ function initSchema(database: Database) {
   try { database.run(`ALTER TABLE event_clusters ADD COLUMN title_en TEXT;`); } catch (_) {}
   try { database.run(`ALTER TABLE event_clusters ADD COLUMN summary_en TEXT;`); } catch (_) {}
   try { database.run(`ALTER TABLE daily_briefs ADD COLUMN language TEXT DEFAULT 'zh-CN';`); } catch (_) {}
+  try { database.run(`ALTER TABLE daily_briefs ADD COLUMN brief_type TEXT DEFAULT 'daily';`); } catch (_) {}
 }
 
 /**
@@ -668,6 +670,7 @@ export async function getSignals(filters: {
   reviewStatus?: ReviewStatus;
   search?: string;
   limit?: number;
+  sinceHours?: number;
 }): Promise<Signal[]> {
   const database = await getDb();
 
@@ -692,6 +695,12 @@ export async function getSignals(filters: {
     sql += ' AND (title_zh LIKE ? OR title_en LIKE ? OR title_raw LIKE ? OR summary_zh LIKE ? OR summary_en LIKE ? OR tags LIKE ?)';
     const term = `%${filters.search}%`;
     params.push(term, term, term, term, term, term);
+  }
+
+  if (filters.sinceHours) {
+    const since = new Date(Date.now() - filters.sinceHours * 3600000).toISOString();
+    sql += ' AND publish_time >= ?';
+    params.push(since);
   }
 
   sql += ' ORDER BY radar_score DESC, publish_time DESC';
@@ -800,20 +809,20 @@ export async function insertCluster(c: EventCluster): Promise<void> {
   saveToDisk();
 }
 
-export async function getLatestDailyBrief(lang?: string): Promise<DailyBrief | null> {
+export async function getLatestDailyBrief(lang?: string, type: 'daily' | 'weekly' | 'monthly' = 'daily'): Promise<DailyBrief | null> {
   const database = await getDb();
-  let sql = 'SELECT * FROM daily_briefs';
-  const params: any[] = [];
+  let sql = 'SELECT * FROM daily_briefs WHERE brief_type = ?';
+  const params: any[] = [type];
   if (lang) {
-    sql += ' WHERE language = ?';
+    sql += ' AND language = ?';
     params.push(lang);
   }
   sql += ' ORDER BY date DESC, generated_at DESC LIMIT 1';
 
   let res = database.exec(sql, params);
-  // Fallback to any brief if requested language brief doesn't exist
+  // Fallback to any brief of this type if requested language brief doesn't exist
   if ((!res || res.length === 0) && lang) {
-    res = database.exec('SELECT * FROM daily_briefs ORDER BY date DESC, generated_at DESC LIMIT 1');
+    res = database.exec('SELECT * FROM daily_briefs WHERE brief_type = ? ORDER BY date DESC, generated_at DESC LIMIT 1', [type]);
   }
 
   if (!res || res.length === 0) return null;
@@ -826,6 +835,7 @@ export async function getLatestDailyBrief(lang?: string): Promise<DailyBrief | n
     id: obj.id,
     date: obj.date,
     language: obj.language || 'zh-CN',
+    brief_type: obj.brief_type || 'daily',
     headline: obj.headline,
     executive_summary: obj.executive_summary,
     sections: JSON.parse(obj.sections_json || '[]'),
@@ -837,17 +847,20 @@ export async function getLatestDailyBrief(lang?: string): Promise<DailyBrief | n
 export async function saveDailyBrief(brief: DailyBrief): Promise<void> {
   const database = await getDb();
   const briefLang = brief.language || 'zh-CN';
+  const briefType = brief.brief_type || 'daily';
   const generatedAt = brief.generated_at || new Date().toISOString();
   const dateStr = brief.date || new Date().toISOString().split('T')[0];
-  const briefId = brief.id ? (brief.id.includes(briefLang) ? brief.id : `${brief.id}-${briefLang}`) : `${dateStr}-${briefLang}`;
+  const typeSuffix = briefType !== 'daily' ? `-${briefType}` : '';
+  const briefId = brief.id ? (brief.id.includes(briefLang) ? brief.id : `${brief.id}-${briefLang}${typeSuffix}`) : `${dateStr}-${briefLang}${typeSuffix}`;
   const sectionsJson = JSON.stringify(brief.sections || []);
 
   database.run(
-    'INSERT OR REPLACE INTO daily_briefs (id, date, language, headline, executive_summary, sections_json, markdown_content, generated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+    'INSERT OR REPLACE INTO daily_briefs (id, date, language, brief_type, headline, executive_summary, sections_json, markdown_content, generated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
     [
       briefId,
       dateStr,
       briefLang,
+      briefType,
       brief.headline || 'Daily Brief',
       brief.executive_summary || '',
       sectionsJson,

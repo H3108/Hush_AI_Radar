@@ -106,6 +106,9 @@ export interface Translations {
   executiveSummary: string;
   readOriginal: string;
   switchBriefLang: string;
+  generateBrief: string;
+  generatingBrief: string;
+  regenerateBrief: string;
 
   // Models & Papers
   modelsDbTitle: string;
@@ -256,6 +259,9 @@ export const translations: Record<Language, Translations> = {
     exportMd: '导出文件',
     executiveSummary: '今日核心导读',
     readOriginal: '阅读原文',
+    generateBrief: '生成简报',
+    generatingBrief: 'AI 生成中...',
+    regenerateBrief: '重新生成',
     switchBriefLang: '切换日报语言',
 
     // Models & Papers
@@ -289,7 +295,7 @@ export const translations: Record<Language, Translations> = {
     copyCode: '复制代码',
 
     // Monitor
-    systemMonitorTitle: '系统与 18 源巡检监控',
+    systemMonitorTitle: '系统与数据源巡检监控',
     systemMonitorDesc: '实时监控 Agent 流水线、Gemini 3.6 Flash 推理与 SQLite 存储状态。',
     dbInfrastructure: '数据库架构与引擎指标',
     storageDriver: '存储驱动',
@@ -405,6 +411,9 @@ export const translations: Record<Language, Translations> = {
     exportMd: 'Export MD',
     executiveSummary: 'Executive Summary',
     readOriginal: 'Read Original',
+    generateBrief: 'Generate Brief',
+    generatingBrief: 'Generating...',
+    regenerateBrief: 'Regenerate',
     switchBriefLang: 'Brief Language',
 
     // Models & Papers
@@ -438,7 +447,7 @@ export const translations: Record<Language, Translations> = {
     copyCode: 'Copy Code',
 
     // Monitor
-    systemMonitorTitle: 'System & 18 Source Health Monitor',
+    systemMonitorTitle: 'System & Source Health Monitor',
     systemMonitorDesc: 'Real-time status of pipeline automation, Gemini 3.6 Flash inference, and SQLite storage.',
     dbInfrastructure: 'Database & Infrastructure Metrics',
     storageDriver: 'Storage Driver',

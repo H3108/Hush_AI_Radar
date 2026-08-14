@@ -2,18 +2,21 @@ import crypto from 'crypto';
 import Parser from 'rss-parser';
 import { CURATED_SOURCES } from '../data/curatedSources';
 
-import { Signal, SignalScoreBreakdown } from '../types';
+import { DailyBrief, Signal, SignalScoreBreakdown } from '../types';
 import {
+  getClusters,
   getDb,
   getEmbeddings,
   getExistingSignalIds,
+  getLatestDailyBrief,
   getSignals,
   insertSignal,
   logSyncRun,
+  saveDailyBrief,
   saveEmbedding,
   saveToDiskPublic
 } from './db';
-import { analyzeRawSignal, cosineSimilarity, embedText } from './gemini';
+import { analyzeRawSignal, cosineSimilarity, embedText, isoWeekKey, synthesizePeriodicBrief } from './gemini';
 
 const rssParser = new Parser({
   timeout: 8000,
@@ -224,7 +227,8 @@ export async function executeRadarPipelineScan(): Promise<{
  * ----------------------------------------------------------------------------
  * Strategy:
  *   1. Take a working set = newly-ingested signals + approved signals from the
- *      last 48h (keeps the working set bounded).
+ *      last 28 days (covers the weekly/monthly report window; keeps the working
+ *      set bounded and lets historical signals join clusters).
  *   2. Ensure each has an embedding (compute + cache if missing).
  *   3. Greedy agglomerative pass: for each signal in order (highest score first)
  *      find the most similar prior cluster head. The signal only joins a cluster
@@ -237,13 +241,14 @@ export async function executeRadarPipelineScan(): Promise<{
 
 const CLUSTER_SIMILARITY_THRESHOLD = 0.85; // absolute floor for a "match"
 const CLUSTER_MARGIN = 0.05;                // min gap vs the second-best head
-const CLUSTER_RECENT_WINDOW_HOURS = 48;
+const CLUSTER_RECENT_WINDOW_HOURS = 28 * 24; // 28-day window (weekly + monthly brief support)
 const CLUSTER_MAX_SIZE = 8;
+const CLUSTER_MAX_WORKING_SET = 300;        // safety cap for the O(n²) similarity pass
 
 async function runSemanticClustering(newSignalIds: string[]): Promise<number> {
   const recentApproved = await getSignals({
     reviewStatus: 'approved',
-    limit: 60
+    limit: CLUSTER_MAX_WORKING_SET
   });
   const recent = recentApproved.filter((s) => {
     const ageH = (Date.now() - new Date(s.publish_time).getTime()) / 3_600_000;
@@ -252,7 +257,7 @@ async function runSemanticClustering(newSignalIds: string[]): Promise<number> {
 
   // Working set: dedupe by id, prioritize new signals first
   const seen = new Set<string>();
-  const workingSet: Signal[] = [];
+  let workingSet: Signal[] = [];
   for (const id of newSignalIds) {
     const sig = recent.find((s) => s.id === id);
     if (sig && !seen.has(id)) {
@@ -270,6 +275,11 @@ async function runSemanticClustering(newSignalIds: string[]): Promise<number> {
 
   // Sort by radar_score desc so cluster heads are the strongest signals
   workingSet.sort((a, b) => b.radar_score - a.radar_score);
+
+  // Safety cap: keep the highest-scoring signals when the 28-day window grows
+  if (workingSet.length > CLUSTER_MAX_WORKING_SET) {
+    workingSet = workingSet.slice(0, CLUSTER_MAX_WORKING_SET);
+  }
 
   // Ensure embeddings exist for every signal in the working set
   const embeddingMap = await getEmbeddings(workingSet.map((s) => s.id));
@@ -366,4 +376,45 @@ async function runSemanticClustering(newSignalIds: string[]): Promise<number> {
     saveToDiskPublic();
   }
   return upserted;
+}
+
+/* ============================================================================
+ * PERIODIC BRIEFS (Weekly / Monthly)
+ * ----------------------------------------------------------------------------
+ * Auto-generates a weekly or monthly intelligence brief for the current period
+ * key. Skips when a brief for the current period already exists (idempotent
+ * guard for the background daemon).
+ * ========================================================================== */
+
+export async function generatePeriodicBriefIfStale(
+  period: 'weekly' | 'monthly',
+  lang: 'zh-CN' | 'en' = 'zh-CN'
+): Promise<DailyBrief | null> {
+  const hours = period === 'weekly' ? 7 * 24 : 30 * 24;
+  const periodKey = period === 'weekly'
+    ? isoWeekKey(new Date())
+    : new Date().toISOString().slice(0, 7);
+
+  const latest = await getLatestDailyBrief(lang, period);
+  if (latest && latest.date === periodKey) {
+    addPipelineLog('info', `[${period} Brief] Skipping: brief for ${periodKey} already exists.`);
+    return latest;
+  }
+
+  const signals = await getSignals({ reviewStatus: 'approved', sinceHours: hours });
+  if (signals.length === 0) {
+    addPipelineLog('warn', `[${period} Brief] Skipped: no approved signals within the last ${hours / 24} days.`);
+    return null;
+  }
+
+  const clusters = (await getClusters()).filter((c) => {
+    const ageH = (Date.now() - new Date(c.updated_at || c.created_at).getTime()) / 3600000;
+    return ageH <= hours;
+  });
+
+  addPipelineLog('gemini', `[${period} Brief] Synthesizing ${period} intelligence brief for ${periodKey} (${signals.length} signals, ${clusters.length} clusters)...`);
+  const brief = await synthesizePeriodicBrief({ signals, clusters, period, lang });
+  await saveDailyBrief(brief);
+  addPipelineLog('success', `[${period} Brief] Generated ${period} brief for ${periodKey}: "${(brief.headline || '').slice(0, 40)}..."`);
+  return brief;
 }

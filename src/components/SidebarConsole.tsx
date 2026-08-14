@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { BookOpen, ChevronDown, ChevronRight, Code, Cpu, Database, FileText, Layers, Lock, Radio, Rss, Sparkles } from 'lucide-react';
+import { Activity, BookOpen, ChevronDown, ChevronRight, Code, Cpu, Database, FileText, Layers, Lock, Radio, Rss, Sparkles } from 'lucide-react';
 import { useLanguage } from '../i18n/LanguageContext';
 import { SystemStats } from '../types';
 
-export type ActiveTab = 'stream' | 'clusters' | 'daily' | 'weekly' | 'monthly' | 'models' | 'papers' | 'rss' | 'api' | 'skill' | 'admin';
+export type ActiveTab = 'stream' | 'clusters' | 'daily' | 'weekly' | 'monthly' | 'models' | 'papers' | 'monitor' | 'rss' | 'api' | 'skill' | 'admin';
 
 interface SidebarConsoleProps {
   activeTab: ActiveTab;
@@ -76,6 +76,14 @@ export const SidebarConsole: React.FC<SidebarConsoleProps> = ({
         { id: 'api', label: t.navOpenApi, icon: <Code className="w-3.5 h-3.5 text-[#06B6D4]" /> },
         { id: 'skill', label: t.navAgentSkill, icon: <Cpu className="w-3.5 h-3.5 text-[#A855F7]" /> },
       ]
+    },
+    {
+      id: 'system',
+      title: t.groupSystem,
+      icon: <Activity className="w-4 h-4 text-[#F59E0B]" />,
+      subItems: [
+        { id: 'monitor', label: t.navSystemMonitor, icon: <Activity className="w-3.5 h-3.5 text-[#F59E0B]" /> },
+      ]
     }
   ];
 
@@ -84,7 +92,8 @@ export const SidebarConsole: React.FC<SidebarConsoleProps> = ({
     radar: true,
     insights: true,
     knowledge: true,
-    connect: true
+    connect: true,
+    system: true
   });
 
   const toggleGroup = (groupId: string) => {

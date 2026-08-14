@@ -6,7 +6,7 @@ import { createServer as createViteServer } from 'vite';
 import { createAdminRouter } from './src/server/routes/admin';
 import { createApiV1Router } from './src/server/routes/apiv1';
 import { createPublicRouter } from './src/server/routes/public';
-import { executeRadarPipelineScan } from './src/server/pipeline';
+import { executeRadarPipelineScan, generatePeriodicBriefIfStale } from './src/server/pipeline';
 
 const PORT = Number(process.env.PORT) || 3000;
 const FIFTEEN_MINUTES_MS = 15 * 60 * 1000;
@@ -32,6 +32,22 @@ async function startServer(): Promise<void> {
       console.error('[Hush AI Radar Daemon] Automated background sync error:', err);
     }
   }, FIFTEEN_MINUTES_MS);
+
+  // Background daemon: weekly (Sun 23:55 UTC) + monthly (1st 23:55 UTC) briefs.
+  setInterval(async () => {
+    try {
+      const now = new Date();
+      if (now.getUTCHours() !== 23 || now.getUTCMinutes() !== 55) return;
+      if (now.getUTCDay() === 0) {
+        await generatePeriodicBriefIfStale('weekly', 'zh-CN');
+      }
+      if (now.getUTCDate() === 1) {
+        await generatePeriodicBriefIfStale('monthly', 'zh-CN');
+      }
+    } catch (err) {
+      console.error('[Hush AI Radar Daemon] Periodic brief generation error:', err);
+    }
+  }, 60 * 1000);
 
   // Vite / static serving for the SPA shell.
   if (process.env.NODE_ENV !== 'production') {

@@ -8,7 +8,7 @@ import {
   getSystemStats,
   saveDailyBrief
 } from '../db';
-import { GEMINI_MODEL, synthesizeDailyBrief } from '../gemini';
+import { GEMINI_MODEL, synthesizeDailyBrief, synthesizePeriodicBrief } from '../gemini';
 import { addPipelineLog } from '../pipeline';
 
 /**
@@ -58,12 +58,28 @@ export function createPublicRouter(): express.Router {
   router.get('/api/daily/latest', async (req, res) => {
     try {
       const lang = (req.query.lang as 'zh-CN' | 'en') || 'zh-CN';
-      let brief = await getLatestDailyBrief(lang);
+      const type = (req.query.type as 'daily' | 'weekly' | 'monthly') || 'daily';
+      let brief = await getLatestDailyBrief(lang, type);
       if (!brief) {
-        const approvedSignals = await getSignals({ reviewStatus: 'approved' });
-        const synth = await synthesizeDailyBrief(approvedSignals, lang);
-        if (synth && synth.headline) {
-          brief = synth as any;
+        if (type === 'daily') {
+          const approvedSignals = await getSignals({ reviewStatus: 'approved' });
+          const synth = await synthesizeDailyBrief(approvedSignals, lang);
+          if (synth && synth.headline) {
+            brief = synth as any;
+            await saveDailyBrief(brief);
+          }
+        } else {
+          const hours = type === 'weekly' ? 7 * 24 : 30 * 24;
+          const approvedSignals = await getSignals({ reviewStatus: 'approved', sinceHours: hours });
+          if (approvedSignals.length === 0) {
+            return res.json(null);
+          }
+          const clusters = (await getClusters()).filter((c) => {
+            const ageH = (Date.now() - new Date(c.updated_at || c.created_at).getTime()) / 3600000;
+            return ageH <= hours;
+          });
+          const synth = await synthesizePeriodicBrief({ signals: approvedSignals, clusters, period: type, lang });
+          brief = synth;
           await saveDailyBrief(brief);
         }
       }

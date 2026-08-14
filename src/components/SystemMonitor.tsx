@@ -18,6 +18,28 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
     ? new Date(stats.last_sync_time).toLocaleString()
     : 'Auto Pipeline Active (15m Interval)';
 
+  const healthyCount = sources.filter((s) => s.status === 'active').length;
+  const healthyPct = sources.length ? Math.round((healthyCount / sources.length) * 100) : 0;
+  const engineModel = stats?.engine?.model || 'Gemini';
+
+  const statusMeta: Record<string, { label: string; cls: string; icon: React.ReactNode }> = {
+    active: {
+      label: 'ACTIVE',
+      cls: 'bg-[#10B981]/10 text-[#10B981] border-[#10B981]/30',
+      icon: <CheckCircle className="w-3 h-3" />
+    },
+    degraded: {
+      label: 'DEGRADED',
+      cls: 'bg-[#F59E0B]/10 text-[#F59E0B] border-[#F59E0B]/30',
+      icon: <Clock className="w-3 h-3" />
+    },
+    failing: {
+      label: 'FAILING',
+      cls: 'bg-[#EF4444]/10 text-[#EF4444] border-[#EF4444]/30',
+      icon: <Activity className="w-3 h-3" />
+    }
+  };
+
   return (
     <div className="flex-1 p-4 bg-[#0B0D10] space-y-4 overflow-y-auto max-h-[calc(100vh-140px)]">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-[#1E232D] pb-3 gap-3">
@@ -27,7 +49,7 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
             <span>{t.systemMonitorTitle}</span>
           </h2>
           <p className="text-xs text-[#6B7280] font-mono-code mt-0.5">
-            Real-time status of pipeline automation, Gemini 3.6 Flash inference, and SQLite storage.
+            Real-time status of pipeline automation, {engineModel} inference, and SQLite storage.
           </p>
         </div>
 
@@ -66,8 +88,8 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
             <span className="uppercase tracking-wider">{t.sourceHealthLabel}</span>
             <ShieldCheck className="w-4 h-4 text-[#F59E0B]" />
           </div>
-          <div className="text-sm text-white font-bold">{stats?.sources_healthy || 18} / 18 ({t.active})</div>
-          <p className="text-[11px] text-[#6B7280]">100% Curated feeds operating normally</p>
+          <div className="text-sm text-white font-bold">{stats?.sources_healthy ?? healthyCount} / {stats?.sources_total ?? sources.length} ({t.active})</div>
+          <p className="text-[11px] text-[#6B7280]">{healthyPct}% curated feeds currently healthy</p>
         </div>
       </div>
 
@@ -89,7 +111,7 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
           </div>
           <div>
             <span className="text-[#6B7280]">AI Model:</span>
-            <div className="text-[#10B981] font-bold">Gemini 3.6 Flash (@google/genai)</div>
+            <div className="text-[#10B981] font-bold">{engineModel} (@google/genai)</div>
           </div>
           <div>
             <span className="text-[#6B7280]">Admin Sync Route:</span>
@@ -107,8 +129,10 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
       {/* 18 Curated Sources Health Table */}
       <div className="bg-[#12151B] border border-[#1E232D] rounded overflow-x-auto">
         <div className="p-3 bg-[#0B0D10] border-b border-[#1E232D] font-mono-code text-xs text-white font-bold flex items-center justify-between">
-          <span>CURATED INTELLIGENCE SOURCES (18 TOP-TIER SOURCES)</span>
-          <span className="text-[#10B981]">100% HEALTHY</span>
+          <span>CURATED INTELLIGENCE SOURCES ({sources.length} TOP-TIER SOURCES)</span>
+          <span className={healthyPct === 100 ? 'text-[#10B981]' : healthyPct >= 80 ? 'text-[#F59E0B]' : 'text-[#EF4444]'}>
+            {healthyPct}% HEALTHY
+          </span>
         </div>
         <table className="w-full text-left border-collapse text-xs font-mono-code">
           <thead>
@@ -135,9 +159,9 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
                 <td className="p-3 text-[#F59E0B] font-bold">{s.authority_weight.toFixed(1)} / 5.0</td>
                 <td className="p-3 text-[#10B981] font-bold">{s.total_signals_ingested}</td>
                 <td className="p-3">
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#10B981]/10 text-[#10B981] border border-[#10B981]/30 rounded text-[10px] font-bold">
-                    <CheckCircle className="w-3 h-3" />
-                    ACTIVE
+                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 border rounded text-[10px] font-bold ${statusMeta[s.status]?.cls || statusMeta.active.cls}`}>
+                    {statusMeta[s.status]?.icon || <CheckCircle className="w-3 h-3" />}
+                    {statusMeta[s.status]?.label || 'ACTIVE'}
                   </span>
                 </td>
               </tr>

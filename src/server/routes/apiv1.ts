@@ -56,7 +56,8 @@ export function createApiV1Router(): express.Router {
   router.get('/api/v1/daily/latest', async (req, res) => {
     try {
       const lang = (req.query.lang as 'zh-CN' | 'en') || 'zh-CN';
-      const brief = await getLatestDailyBrief(lang);
+      const type = (req.query.type as 'daily' | 'weekly' | 'monthly') || 'daily';
+      const brief = await getLatestDailyBrief(lang, type);
       res.json({ status: 'success', version: 'v1', brief });
     } catch (err: any) {
       res.status(500).json({ status: 'error', message: err.message });

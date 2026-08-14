@@ -6,10 +6,10 @@ Zero-noise real-time AI intelligence radar — monitors breakthrough LLMs, ArXiv
 
 - **多源情报采集** — 18 个精选高权威 RSS 源（OpenAI、ArXiv、DeepSeek、Meta AI、HuggingFace 等），15 分钟自动巡检 + 手动触发。
 - **Gemini 智能分析** — 每条信号经 Gemini 进行中英文标题润色、双语摘要、AI 影响力评分、置信度评分、自动打标。
-- **语义聚类** — 使用 Gemini Embedding 计算语义相似度，将相近情报（余弦相似度 ≥ 0.78）自动聚合为事件簇 (Event Clusters)。
+- **语义聚类** — 使用 Gemini Embedding 计算语义相似度，将相近情报（余弦相似度 ≥ 0.78）自动聚合为事件簇 (Event Clusters)，聚类窗口覆盖近 28 天历史信号。
 - **人工审核队列** — 低置信度信号进入 Review Queue，管理员批准/驳回（仅管理员可操作）。
-- **日报简报** — Gemini 聚合当日 Top 信号生成中/英文每日简报。
-- **管理员控制台** — 系统状态、数据源健康、Gemini 配额用量、日志、同步控制、一键生成日报。
+- **智能简报（日报/周报/月报）** — Gemini 聚合对应周期 Top 信号与事件簇生成中/英文简报；周报每周日 23:55 UTC、月报每月 1 日 23:55 UTC 自动生成。
+- **管理员控制台** — 系统状态、数据源健康、Gemini 配额用量、日志、同步控制、一键生成简报。
 - **Agent API v1** — 面向 AI Agent 的稳定只读 API + RSS 2.0 输出。
 
 ## 快速开始 (Quick Start)
@@ -105,7 +105,7 @@ npm run dev:local   # 已内置 HTTP_PROXY=http://127.0.0.1:7897
 | GET | `/api/stats` | 系统统计 |
 | GET | `/api/signals` | 信号流（`category` / `search` / `minScore` / `reviewStatus` / `limit`） |
 | GET | `/api/clusters` | 语义事件簇 |
-| GET | `/api/daily/latest?lang=zh-CN` | 最新日报 |
+| GET | `/api/daily/latest?lang=zh-CN&type=daily` | 最新简报（`type`：`daily` / `weekly` / `monthly`，缺失时自动生成） |
 | GET | `/api/models-papers` | 模型与论文 |
 | GET | `/api/sources` | 数据源列表 |
 | GET | `/rss.xml` | RSS 2.0 输出 |
@@ -118,7 +118,7 @@ npm run dev:local   # 已内置 HTTP_PROXY=http://127.0.0.1:7897
 | GET | `/api/v1/signals/latest` | 最新信号（裁剪字段） |
 | GET | `/api/v1/clusters/latest` | 最新事件簇 |
 | GET | `/api/v1/models/latest` | 模型/论文 |
-| GET | `/api/v1/daily/latest` | 日报 |
+| GET | `/api/v1/daily/latest?type=daily` | 简报（`type`：`daily` / `weekly` / `monthly`） |
 
 ### 管理员接口（需鉴权）
 
@@ -138,7 +138,7 @@ npm run dev:local   # 已内置 HTTP_PROXY=http://127.0.0.1:7897
 | GET | `/api/admin/logs` | 运行日志 |
 | POST | `/api/admin/gemini-ping` | Gemini 连通性/延迟测试 |
 | POST | `/api/admin/sync` | 手动触发扫描 |
-| POST | `/api/admin/generate-brief` | 生成日报 |
+| POST | `/api/admin/generate-brief` | 生成简报（`{ lang, type }`，`type` 为 `daily`/`weekly`/`monthly`） |
 | GET | `/api/review-queue` | 待审信号列表 |
 | POST | `/api/review-queue/:id/action` | 批准/驳回信号（`{ "action": "approve"\|"reject" }`） |
 | GET | `/api/admin/quota` | Gemini 配额快照 |
@@ -164,7 +164,8 @@ server.ts                       ← Express 入口 + Vite 中间件 + 15min 后�
 - **重试策略**：Gemini 调用遇 429/500/503 等瞬时错误时指数退避重试（800ms → 1600ms → 3200ms → 6400ms，封顶），有效抵御限流。
 - **配额监控**：每次调用记录 `api_usage` 表（请求数、输入/输出 Token、模型），管理员控制台实时展示今日用量与近 60 秒请求速率。
 - **批量去重**：扫描时预计算候选信号 ID，单次 `IN` 查询批量比对已存在记录，消除原先的 N+1 全表扫描。
-- **语义聚类**：对新增 + 近 48h 已批准信号生成 embedding（缺失时按需计算并缓存），贪心聚合高相似信号为事件簇并回填 `cluster_id`。
+- **语义聚类**：对新增 + 近 28 天已批准信号生成 embedding（缺失时按需计算并缓存），贪心聚合高相似信号为事件簇并回填 `cluster_id`。
+- **周期简报**：周报/月报按周期窗口（7/30 天）聚合 signals 与事件簇，由 Gemini 生成结构化简报并持久化（幂等，当前周期已存在则跳过）。
 
 ## 安全与隐私
 

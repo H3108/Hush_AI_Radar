@@ -8,6 +8,7 @@ import { Header } from './components/Header';
 import { ModelsPapersView } from './components/ModelsPapersView';
 import { ActiveTab, SidebarConsole } from './components/SidebarConsole';
 import { SignalFeed } from './components/SignalFeed';
+import { SystemMonitor } from './components/SystemMonitor';
 import { DailyBrief, EventCluster, ModelPaperItem, Signal, Source, SystemStats } from './types';
 import { useLanguage } from './i18n/LanguageContext';
 
@@ -48,6 +49,8 @@ export function App() {
   const [signals, setSignals] = useState<Signal[]>([]);
   const [clusters, setClusters] = useState<EventCluster[]>([]);
   const [dailyBrief, setDailyBrief] = useState<DailyBrief | null>(null);
+  const [weeklyBrief, setWeeklyBrief] = useState<DailyBrief | null>(null);
+  const [monthlyBrief, setMonthlyBrief] = useState<DailyBrief | null>(null);
   const [modelsPapers, setModelsPapers] = useState<ModelPaperItem[]>([]);
   const [pendingSignals, setPendingSignals] = useState<Signal[]>([]);
   const [sources, setSources] = useState<Source[]>([]);
@@ -55,6 +58,26 @@ export function App() {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [isGeneratingBrief, setIsGeneratingBrief] = useState<boolean>(false);
+
+  // Fetch weekly/monthly brief on demand (auto-generates server-side on first hit)
+  const fetchBrief = async (type: 'weekly' | 'monthly') => {
+    try {
+      const res = await fetch(`/api/daily/latest?lang=${language}&type=${type}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (type === 'weekly') setWeeklyBrief(data);
+        else setMonthlyBrief(data);
+      }
+    } catch (err) {
+      console.error(`[Hush Radar App] ${type} brief fetch error:`, err);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'weekly') fetchBrief('weekly');
+    else if (activeTab === 'monthly') fetchBrief('monthly');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, language]);
 
   // Fetch initial data
   const fetchData = async () => {
@@ -182,8 +205,8 @@ export function App() {
     }
   };
 
-  // Handle Re-synthesize Daily Brief
-  const handleGenerateBrief = async () => {
+  // Handle Re-synthesize Brief (daily / weekly / monthly)
+  const handleGenerateBrief = async (type: 'daily' | 'weekly' | 'monthly' = 'daily') => {
     setIsGeneratingBrief(true);
     try {
       const adminToken = sessionStorage.getItem('hush_admin_session_token') || '';
@@ -194,16 +217,18 @@ export function App() {
           ...(adminToken ? { 'Authorization': `Bearer ${adminToken}` } : {})
         },
         credentials: 'include',
-        body: JSON.stringify({ lang: language })
+        body: JSON.stringify({ lang: language, type })
       });
       if (res.ok) {
         const data = await res.json();
         if (data.brief) {
-          setDailyBrief(data.brief);
+          if (type === 'weekly') setWeeklyBrief(data.brief);
+          else if (type === 'monthly') setMonthlyBrief(data.brief);
+          else setDailyBrief(data.brief);
         }
       }
     } catch (err) {
-      console.error('[Hush Radar App] Daily Brief generate error:', err);
+      console.error('[Hush Radar App] Brief generate error:', err);
     } finally {
       setIsGeneratingBrief(false);
     }
@@ -259,15 +284,33 @@ export function App() {
           )}
 
           {activeTab === 'daily' && (
-            <InsightsView brief={dailyBrief} activeSubTab="daily" />
+            <InsightsView
+              brief={dailyBrief}
+              activeSubTab="daily"
+              onSubTabChange={handleTabChange}
+              isGenerating={isGeneratingBrief}
+              onGenerateBrief={() => handleGenerateBrief('daily')}
+            />
           )}
 
           {activeTab === 'weekly' && (
-            <InsightsView brief={dailyBrief} activeSubTab="weekly" />
+            <InsightsView
+              brief={weeklyBrief}
+              activeSubTab="weekly"
+              onSubTabChange={handleTabChange}
+              isGenerating={isGeneratingBrief}
+              onGenerateBrief={() => handleGenerateBrief('weekly')}
+            />
           )}
 
           {activeTab === 'monthly' && (
-            <InsightsView brief={dailyBrief} activeSubTab="monthly" />
+            <InsightsView
+              brief={monthlyBrief}
+              activeSubTab="monthly"
+              onSubTabChange={handleTabChange}
+              isGenerating={isGeneratingBrief}
+              onGenerateBrief={() => handleGenerateBrief('monthly')}
+            />
           )}
 
           {activeTab === 'models' && (
@@ -277,6 +320,8 @@ export function App() {
           {activeTab === 'papers' && (
             <ModelsPapersView items={modelsPapers} isLoading={isLoading} initialTypeFilter="paper" />
           )}
+
+          {activeTab === 'monitor' && <SystemMonitor stats={stats} sources={sources} />}
 
           {activeTab === 'rss' && <ConnectView initialTab="rss" />}
 

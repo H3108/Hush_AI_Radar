@@ -1,5 +1,6 @@
 import express from 'express';
 import {
+  getClusters,
   getLatestDailyBrief,
   getSignals,
   getSourcesFromDb,
@@ -7,7 +8,7 @@ import {
   saveDailyBrief,
   updateSignalReviewStatus
 } from '../db';
-import { GEMINI_MODEL, synthesizeDailyBrief, getQuotaSnapshot } from '../gemini';
+import { GEMINI_MODEL, synthesizeDailyBrief, synthesizePeriodicBrief, getQuotaSnapshot } from '../gemini';
 import { addPipelineLog, executeRadarPipelineScan, getPipelineLogs } from '../pipeline';
 import {
   createAdminSession,
@@ -21,6 +22,26 @@ import {
  * Admin-only routes. All mutating / telemetry endpoints live here.
  * Login via /api/admin/verify issues an HttpOnly session cookie.
  */
+
+async function synthesizeBrief(lang: 'zh-CN' | 'en', type: 'daily' | 'weekly' | 'monthly'): Promise<any> {
+  if (type === 'daily') {
+    const approvedSignals = await getSignals({ reviewStatus: 'approved' });
+    const synth = await synthesizeDailyBrief(approvedSignals, lang);
+    const brief = synth as any;
+    await saveDailyBrief(brief);
+    return brief;
+  }
+  const hours = type === 'weekly' ? 7 * 24 : 30 * 24;
+  const approvedSignals = await getSignals({ reviewStatus: 'approved', sinceHours: hours });
+  const clusters = (await getClusters()).filter((c) => {
+    const ageH = (Date.now() - new Date(c.updated_at || c.created_at).getTime()) / 3600000;
+    return ageH <= hours;
+  });
+  const brief = await synthesizePeriodicBrief({ signals: approvedSignals, clusters, period: type, lang });
+  await saveDailyBrief(brief);
+  return brief;
+}
+
 export function createAdminRouter(): express.Router {
   const router = express.Router();
 
@@ -173,33 +194,29 @@ export function createAdminRouter(): express.Router {
   /* --- G. Admin AI Daily Brief Generation --- */
   router.post('/api/admin/generate-brief', requireAdmin, async (req, res) => {
     try {
-      addPipelineLog('gemini', '[Daily Brief] Initiating Gemini daily intelligence synthesis...');
       const lang = (req.body?.lang as 'zh-CN' | 'en') || 'zh-CN';
-      const approvedSignals = await getSignals({ reviewStatus: 'approved' });
-      const synth = await synthesizeDailyBrief(approvedSignals, lang);
-      const brief = synth as any;
-      await saveDailyBrief(brief);
-      addPipelineLog('success', `[Daily Brief] Successfully synthesized brief for ${lang}: "${brief.headline?.slice(0, 40)}..."`);
+      const type = (req.body?.type as 'daily' | 'weekly' | 'monthly') || 'daily';
+      addPipelineLog('gemini', `[${type} Brief] Initiating Gemini intelligence synthesis...`);
+      const brief = await synthesizeBrief(lang, type);
+      addPipelineLog('success', `[${type} Brief] Successfully synthesized ${type} brief for ${lang}: "${brief.headline?.slice(0, 40)}..."`);
       res.json({ success: true, brief });
     } catch (err: any) {
-      const errMsg = err?.message || String(err) || 'Daily brief generation failed';
-      addPipelineLog('error', `[Daily Brief Error] ${errMsg}`);
+      const errMsg = err?.message || String(err) || 'Brief generation failed';
+      addPipelineLog('error', `[Brief Error] ${errMsg}`);
       res.status(500).json({ error: errMsg });
     }
   });
 
-  /* --- H. Daily Brief Generation (alt path kept for backward compat) --- */
+  /* --- H. Brief Generation (alt path kept for backward compat) --- */
   router.post('/api/daily/generate', requireAdmin, async (req, res) => {
     try {
       const lang = (req.body?.lang as 'zh-CN' | 'en') || 'zh-CN';
-      const approvedSignals = await getSignals({ reviewStatus: 'approved' });
-      const synth = await synthesizeDailyBrief(approvedSignals, lang);
-      const brief = synth as any;
-      await saveDailyBrief(brief);
+      const type = (req.body?.type as 'daily' | 'weekly' | 'monthly') || 'daily';
+      const brief = await synthesizeBrief(lang, type);
       res.json({ success: true, brief });
     } catch (err: any) {
-      const errMsg = err?.message || String(err) || 'Daily brief generation failed';
-      addPipelineLog('error', `[Daily Brief Error] ${errMsg}`);
+      const errMsg = err?.message || String(err) || 'Brief generation failed';
+      addPipelineLog('error', `[Brief Error] ${errMsg}`);
       res.status(500).json({ error: errMsg });
     }
   });

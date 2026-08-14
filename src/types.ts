@@ -79,6 +79,7 @@ export interface DailyBrief {
   id: string;                     // YYYY-MM-DD or YYYY-MM-DD-lang
   date: string;
   language?: 'zh-CN' | 'en';
+  brief_type?: 'daily' | 'weekly' | 'monthly';
   headline: string;
   executive_summary: string;
   sections: DailyBriefSection[];

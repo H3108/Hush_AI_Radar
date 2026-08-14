@@ -335,6 +335,139 @@ export async function synthesizeDailyBrief(signals: Signal[], lang: 'zh-CN' | 'e
   }
 }
 
+export async function synthesizePeriodicBrief(input: {
+  signals: Signal[];
+  clusters?: EventCluster[];
+  period: 'weekly' | 'monthly';
+  lang?: 'zh-CN' | 'en';
+}): Promise<DailyBrief> {
+  const { signals, clusters = [], period, lang = 'zh-CN' } = input;
+  const isEn = lang === 'en';
+  const today = new Date();
+  const days = period === 'weekly' ? 7 : 30;
+  const rangeStart = new Date(today.getTime() - (days - 1) * 86400000);
+  const rangeLabel = `${rangeStart.toISOString().slice(0, 10)} ~ ${today.toISOString().slice(0, 10)}`;
+  const periodKey = period === 'weekly' ? isoWeekKey(today) : today.toISOString().slice(0, 7);
+  const typeLabel = isEn
+    ? (period === 'weekly' ? 'Weekly Intelligence' : 'Monthly Review')
+    : (period === 'weekly' ? 'AI 精华周报' : 'AI 精华月报');
+
+  const topSignals = [...signals].sort((a, b) => b.radar_score - a.radar_score).slice(0, 12);
+  const ai = getGenAI();
+
+  const toItem = (s: Signal) => ({
+    id: s.id,
+    title: isEn ? (s.title_en || s.title_raw) : s.title_zh,
+    summary: isEn ? (s.summary_en || s.summary_zh) : s.summary_zh,
+    url: s.original_url,
+    source: s.source_name,
+    score: s.radar_score,
+    tags: s.tags
+  });
+
+  const buildBrief = (headline: string, execSummary: string, md: string, genAt: string): DailyBrief => {
+    const giants = topSignals.filter(s => s.category === 'giants' || s.category === 'media');
+    const openSource = topSignals.filter(s => s.category === 'opensource' || s.category === 'product');
+    const papers = topSignals.filter(s => s.category === 'paper');
+    const sections: DailyBriefSection[] = [
+      {
+        category_name: isEn ? '🔥 Tech Giants & Labs' : '🔥 大模型与前沿实验室 (Giants & Labs)',
+        items: giants.slice(0, 6).map(toItem)
+      },
+      {
+        category_name: isEn ? '💻 Open Source & Infrastructure' : '💻 开源生态与基础设施 (Open Source)',
+        items: openSource.slice(0, 6).map(toItem)
+      },
+      {
+        category_name: isEn ? '📄 Research Papers & Algorithms' : '📄 前沿论文与突破算法 (Research & ArXiv)',
+        items: papers.slice(0, 6).map(toItem)
+      }
+    ].filter(sec => sec.items.length > 0);
+
+    return {
+      id: `${periodKey}-${lang}`,
+      date: periodKey,
+      language: lang,
+      brief_type: period,
+      headline,
+      executive_summary: execSummary,
+      sections,
+      markdown_content: md,
+      generated_at: genAt
+    };
+  };
+
+  const fallbackHeadline = isEn
+    ? `${periodKey} Global AI Frontiers ${period === 'weekly' ? 'Weekly' : 'Monthly'} Review`
+    : `${periodKey} 全球 AI 前沿技术与开源生态${period === 'weekly' ? '周报' : '月报'}`;
+
+  const fallbackExec = isEn
+    ? `Hush AI Radar aggregated ${signals.length} verified signals and ${clusters.length} event clusters over ${rangeLabel}, covering LLM milestones, open-source systems, and ArXiv papers.`
+    : `${rangeLabel} 周期内 Hush AI Radar 聚合了 ${signals.length} 条有效 AI 情报与 ${clusters.length} 个事件簇，覆盖大厂模型更新、开源架构演进与学术论文成果。`;
+
+  if (!ai) {
+    return buildBrief(
+      fallbackHeadline,
+      fallbackExec,
+      `# 📡 Hush AI Radar · ${typeLabel} (${periodKey})\n\n> ${rangeLabel}\n\n${fallbackExec}\n`,
+      new Date().toISOString()
+    );
+  }
+
+  const signalSummaryText = topSignals.map(s => {
+    const title = isEn ? (s.title_en || s.title_raw) : s.title_zh;
+    const summary = isEn ? (s.summary_en || s.summary_zh) : s.summary_zh;
+    return `- [Score: ${s.radar_score}] ${title} (Source: ${s.source_name}): ${summary}`;
+  }).join('\n');
+  const clusterText = clusters.slice(0, 8).map(c => {
+    const title = isEn ? (c.title_en || c.title) : c.title;
+    return `- [Impact: ${c.impact_level}, Hot: ${c.hot_score}] ${title} (${c.related_signal_ids.length} signals)`;
+  }).join('\n');
+
+  try {
+    const langInstructions = isEn
+      ? `Write EVERYTHING in clear, professional English.`
+      : `Write EVERYTHING in professional, tech-native Chinese.`;
+    const prompt = `You are Hush AI Radar's chief editor. Synthesize a professional ${period === 'weekly' ? 'Weekly Intelligence' : 'Monthly Review'} brief for period ${periodKey} (${rangeLabel}) in ${isEn ? 'English' : 'Chinese'} based on these top AI signals:\n${signalSummaryText}\n\nAggregated event clusters:\n${clusterText || '(none yet)'}\n\nLanguage requirement: ${langInstructions}\n\nTasks:\n1. Create a punchy, executive-level headline.\n2. Write a 3-sentence executive_summary covering macro trends and patterns across the whole period.\n3. Output full clean markdown_content formatted with radar styling (# 📡 Hush AI Radar · ${typeLabel}...) including a "Top Breakthroughs" and a "Trend Watch" section.`;
+
+    const response = await withRetry(
+      () => ai.models.generateContent({
+        model: GEMINI_MODEL,
+        contents: prompt,
+        config: {
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              headline: { type: Type.STRING },
+              executive_summary: { type: Type.STRING },
+              markdown_content: { type: Type.STRING }
+            },
+            required: ['headline', 'executive_summary', 'markdown_content']
+          }
+        }
+      }),
+      `synthesize${period === 'weekly' ? 'Weekly' : 'Monthly'}Brief`,
+      (r) => ({
+        inputTokens: (r as any)?.usageMetadata?.promptTokenCount,
+        outputTokens: (r as any)?.usageMetadata?.candidatesTokenCount,
+        model: GEMINI_MODEL
+      })
+    );
+
+    const parsed = JSON.parse(response.text || '{}');
+    return buildBrief(
+      parsed.headline || fallbackHeadline,
+      parsed.executive_summary || fallbackExec,
+      parsed.markdown_content || `# 📡 Hush AI Radar · ${typeLabel} (${periodKey})\n\n> ${rangeLabel}\n\n${parsed.executive_summary || fallbackExec}`,
+      new Date().toISOString()
+    );
+  } catch (err) {
+    console.error(`[Hush Radar Gemini] ${period} brief synthesis error after retries:`, err);
+    return buildBrief(fallbackHeadline, fallbackExec, `# 📡 Hush AI Radar · ${typeLabel} (${periodKey})\n\n> ${rangeLabel}\n\n${fallbackExec}`, new Date().toISOString());
+  }
+}
+
 /**
  * Generate semantic embedding for a piece of text (used for clustering).
  * Returns a Float32 vector. Falls back to null when API unavailable.
@@ -402,4 +535,17 @@ export async function getQuotaSnapshot(): Promise<{
   byModel: Array<{ model: string; requests: number; inputTokens: number; outputTokens: number }>;
 }> {
   return getQuotaStats();
+}
+
+/**
+ * ISO-8601 week key (e.g. "2026-W31") for a given date, used to label
+ * weekly intelligence briefs.
+ */
+export function isoWeekKey(d: Date): string {
+  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const dayNum = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+  const weekNo = Math.ceil((((date.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+  return `${date.getUTCFullYear()}-W${String(weekNo).padStart(2, '0')}`;
 }
