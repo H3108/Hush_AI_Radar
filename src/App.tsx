@@ -225,6 +225,8 @@ export function App() {
           onTabChange={handleTabChange}
           pendingReviewCount={pendingSignals.length}
           stats={stats}
+          modelsCount={modelsPapers.filter((i) => i.type === 'model' || i.type === 'framework').length}
+          papersCount={modelsPapers.filter((i) => i.type === 'paper').length}
         />
 
         {/* View Switcher */}

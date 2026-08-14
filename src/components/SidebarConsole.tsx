@@ -10,13 +10,14 @@ interface SidebarConsoleProps {
   onTabChange: (tab: ActiveTab) => void;
   pendingReviewCount: number;
   stats?: SystemStats | null;
+  modelsCount?: number;
+  papersCount?: number;
 }
 
 interface NavSubItem {
   id: ActiveTab;
   label: string;
   icon: React.ReactNode;
-  shortcut: string;
   badge?: number;
 }
 
@@ -31,7 +32,9 @@ export const SidebarConsole: React.FC<SidebarConsoleProps> = ({
   activeTab,
   onTabChange,
   pendingReviewCount,
-  stats
+  stats,
+  modelsCount = 0,
+  papersCount = 0
 }) => {
   const { t } = useLanguage();
 
@@ -41,8 +44,8 @@ export const SidebarConsole: React.FC<SidebarConsoleProps> = ({
       title: t.groupRadar,
       icon: <Radio className="w-4 h-4 text-[#10B981]" />,
       subItems: [
-        { id: 'stream', label: t.navRadarStream, icon: <Radio className="w-3.5 h-3.5 text-[#10B981]" />, shortcut: '1' },
-        { id: 'clusters', label: t.navEventClusters, icon: <Layers className="w-3.5 h-3.5 text-[#3B82F6]" />, shortcut: '2' },
+        { id: 'stream', label: t.navRadarStream, icon: <Radio className="w-3.5 h-3.5 text-[#10B981]" /> },
+        { id: 'clusters', label: t.navEventClusters, icon: <Layers className="w-3.5 h-3.5 text-[#3B82F6]" /> },
       ]
     },
     {
@@ -50,9 +53,9 @@ export const SidebarConsole: React.FC<SidebarConsoleProps> = ({
       title: t.groupInsights,
       icon: <FileText className="w-4 h-4 text-[#F59E0B]" />,
       subItems: [
-        { id: 'daily', label: t.navDailyBrief, icon: <FileText className="w-3.5 h-3.5 text-[#F59E0B]" />, shortcut: '3' },
-        { id: 'weekly', label: t.navWeeklyBrief, icon: <Sparkles className="w-3.5 h-3.5 text-[#EAB308]" />, shortcut: '4' },
-        { id: 'monthly', label: t.navMonthlyBrief, icon: <FileText className="w-3.5 h-3.5 text-[#F97316]" />, shortcut: '5' },
+        { id: 'daily', label: t.navDailyBrief, icon: <FileText className="w-3.5 h-3.5 text-[#F59E0B]" /> },
+        { id: 'weekly', label: t.navWeeklyBrief, icon: <Sparkles className="w-3.5 h-3.5 text-[#EAB308]" /> },
+        { id: 'monthly', label: t.navMonthlyBrief, icon: <FileText className="w-3.5 h-3.5 text-[#F97316]" /> },
       ]
     },
     {
@@ -60,8 +63,8 @@ export const SidebarConsole: React.FC<SidebarConsoleProps> = ({
       title: t.groupKnowledge,
       icon: <Database className="w-4 h-4 text-[#06B6D4]" />,
       subItems: [
-        { id: 'models', label: t.navModels, icon: <Database className="w-3.5 h-3.5 text-[#06B6D4]" />, shortcut: '6' },
-        { id: 'papers', label: t.navPapers, icon: <BookOpen className="w-3.5 h-3.5 text-[#8B5CF6]" />, shortcut: '7' },
+        { id: 'models', label: t.navModels, icon: <Database className="w-3.5 h-3.5 text-[#06B6D4]" /> },
+        { id: 'papers', label: t.navPapers, icon: <BookOpen className="w-3.5 h-3.5 text-[#8B5CF6]" /> },
       ]
     },
     {
@@ -69,9 +72,9 @@ export const SidebarConsole: React.FC<SidebarConsoleProps> = ({
       title: t.groupConnect,
       icon: <Code className="w-4 h-4 text-[#A855F7]" />,
       subItems: [
-        { id: 'rss', label: t.navRssFeed, icon: <Rss className="w-3.5 h-3.5 text-[#F97316]" />, shortcut: '8' },
-        { id: 'api', label: t.navOpenApi, icon: <Code className="w-3.5 h-3.5 text-[#06B6D4]" />, shortcut: '9' },
-        { id: 'skill', label: t.navAgentSkill, icon: <Cpu className="w-3.5 h-3.5 text-[#A855F7]" />, shortcut: '0' },
+        { id: 'rss', label: t.navRssFeed, icon: <Rss className="w-3.5 h-3.5 text-[#F97316]" /> },
+        { id: 'api', label: t.navOpenApi, icon: <Code className="w-3.5 h-3.5 text-[#06B6D4]" /> },
+        { id: 'skill', label: t.navAgentSkill, icon: <Cpu className="w-3.5 h-3.5 text-[#A855F7]" /> },
       ]
     }
   ];
@@ -161,9 +164,16 @@ export const SidebarConsole: React.FC<SidebarConsoleProps> = ({
                                 {item.badge}
                               </span>
                             )}
-                            <span className="text-[9px] text-[#6B7280] bg-[#0B0D10] px-1 py-0.2 rounded border border-[#1E232D]">
-                              [{item.shortcut}]
-                            </span>
+                            {item.id === 'models' && modelsCount > 0 && (
+                              <span className="px-1.5 py-0.2 text-[9px] font-bold bg-[#06B6D4]/20 text-[#06B6D4] rounded-full border border-[#06B6D4]/30">
+                                {modelsCount}
+                              </span>
+                            )}
+                            {item.id === 'papers' && papersCount > 0 && (
+                              <span className="px-1.5 py-0.2 text-[9px] font-bold bg-[#8B5CF6]/20 text-[#8B5CF6] rounded-full border border-[#8B5CF6]/30">
+                                {papersCount}
+                              </span>
+                            )}
                           </div>
                         </button>
                       );
