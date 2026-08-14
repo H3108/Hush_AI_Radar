@@ -45,6 +45,7 @@ export function App() {
   const [minScoreFilter, setMinScoreFilter] = useState<number>(0);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [highlightedClusterId, setHighlightedClusterId] = useState<string | null>(null);
+  const [focusSignalId, setFocusSignalId] = useState<string | null>(null);
 
   const [stats, setStats] = useState<SystemStats | null>(null);
   const [signals, setSignals] = useState<Signal[]>([]);
@@ -247,6 +248,12 @@ export function App() {
     handleTabChange('clusters');
   };
 
+  // Jump from the Radar Ticker to a specific signal (expand + scroll)
+  const handleTickerSelect = (signalId: string) => {
+    setFocusSignalId(signalId);
+    handleTabChange('stream');
+  };
+
   return (
     <div className="min-h-screen bg-[#0B0D10] text-white flex flex-col font-sans selection:bg-[#10B981]/30 selection:text-[#10B981]">
       {/* Top Header */}
@@ -256,6 +263,7 @@ export function App() {
         onSearchChange={setSearchTerm}
         globalResults={{ signals, clusters, models: modelsPapers }}
         onNavigate={handleGlobalNavigate}
+        onSelectSignal={handleTickerSelect}
       />
 
       {/* Main Workspace Layout (Sidebar + Active View) */}
@@ -292,6 +300,7 @@ export function App() {
                 isLoading={isLoading}
                 clusters={clusters}
                 onOpenCluster={handleOpenCluster}
+                focusSignalId={focusSignalId}
               />
             </>
           )}

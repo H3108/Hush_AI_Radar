@@ -16,7 +16,7 @@ import {
   saveEmbedding,
   saveToDiskPublic
 } from './db';
-import { analyzeRawSignal, cosineSimilarity, embedText, isoWeekKey, synthesizePeriodicBrief } from './gemini';
+import { analyzeRawSignal, cosineSimilarity, embedText, isoWeekKey, synthesizeDailyBrief, synthesizePeriodicBrief } from './gemini';
 
 const rssParser = new Parser({
   timeout: 8000,
@@ -63,7 +63,7 @@ export function getPipelineLogs(): PipelineLogEntry[] {
 /**
  * Calculates MD5 hash of canonical URL
  */
-function hashUrl(url: string): string {
+export function hashUrl(url: string): string {
   return crypto.createHash('md5').update(url.toLowerCase().trim()).digest('hex').slice(0, 16);
 }
 
@@ -71,7 +71,7 @@ function hashUrl(url: string): string {
  * Calculates the multi-factor Radar Heat Score (0.0 - 100.0)
  * Formula: (SourceAuth * 0.40) + (Freshness * 0.25) + (AIImpact * 0.25) + (Community * 0.10)
  */
-function calculateRadarScore(
+export function calculateRadarScore(
   sourceWeight: number,
   publishTimeIso: string,
   aiImpactScore: number,
@@ -416,5 +416,34 @@ export async function generatePeriodicBriefIfStale(
   const brief = await synthesizePeriodicBrief({ signals, clusters, period, lang });
   await saveDailyBrief(brief);
   addPipelineLog('success', `[${period} Brief] Generated ${period} brief for ${periodKey}: "${(brief.headline || '').slice(0, 40)}..."`);
+  return brief;
+}
+
+export async function generateDailyBriefIfStale(
+  lang: 'zh-CN' | 'en' = 'zh-CN'
+): Promise<DailyBrief | null> {
+  const todayKey = new Date().toISOString().slice(0, 10);
+
+  const latest = await getLatestDailyBrief(lang, 'daily');
+  if (latest && latest.date === todayKey) {
+    addPipelineLog('info', `[Daily Brief] Skipping: brief for ${todayKey} already exists.`);
+    return latest;
+  }
+
+  const signals = await getSignals({ reviewStatus: 'approved' });
+  if (signals.length === 0) {
+    addPipelineLog('warn', `[Daily Brief] Skipped: no approved signals available.`);
+    return null;
+  }
+
+  addPipelineLog('gemini', `[Daily Brief] Synthesizing daily intelligence brief for ${todayKey} (${signals.length} signals)...`);
+  const synth = await synthesizeDailyBrief(signals, lang);
+  if (!synth || !synth.headline) {
+    addPipelineLog('error', `[Daily Brief] Synthesis returned empty result.`);
+    return null;
+  }
+  const brief = synth as DailyBrief;
+  await saveDailyBrief(brief);
+  addPipelineLog('success', `[Daily Brief] Generated daily brief for ${todayKey}: "${(brief.headline || '').slice(0, 40)}..."`);
   return brief;
 }

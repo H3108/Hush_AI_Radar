@@ -6,7 +6,7 @@ import { createServer as createViteServer } from 'vite';
 import { createAdminRouter } from './src/server/routes/admin';
 import { createApiV1Router } from './src/server/routes/apiv1';
 import { createPublicRouter } from './src/server/routes/public';
-import { executeRadarPipelineScan, generatePeriodicBriefIfStale } from './src/server/pipeline';
+import { executeRadarPipelineScan, generateDailyBriefIfStale, generatePeriodicBriefIfStale } from './src/server/pipeline';
 
 const PORT = Number(process.env.PORT) || 3000;
 const FIFTEEN_MINUTES_MS = 15 * 60 * 1000;
@@ -46,6 +46,17 @@ async function startServer(): Promise<void> {
       }
     } catch (err) {
       console.error('[Hush AI Radar Daemon] Periodic brief generation error:', err);
+    }
+  }, 60 * 1000);
+
+  // Background daemon: daily brief at 00:05 UTC (auto-synthesizes if today's brief missing).
+  setInterval(async () => {
+    try {
+      const now = new Date();
+      if (now.getUTCHours() !== 0 || now.getUTCMinutes() !== 5) return;
+      await generateDailyBriefIfStale('zh-CN');
+    } catch (err) {
+      console.error('[Hush AI Radar Daemon] Daily brief generation error:', err);
     }
   }, 60 * 1000);
 

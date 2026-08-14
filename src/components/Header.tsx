@@ -14,6 +14,7 @@ interface HeaderProps {
     models: ModelPaperItem[];
   };
   onNavigate: (tab: ActiveTab, term: string) => void;
+  onSelectSignal?: (id: string) => void;
 }
 
 interface GlobalResult {
@@ -28,7 +29,8 @@ export const Header: React.FC<HeaderProps> = ({
   searchTerm,
   onSearchChange,
   globalResults,
-  onNavigate
+  onNavigate,
+  onSelectSignal
 }) => {
   const [isFocused, setIsFocused] = useState(false);
   const [showPanel, setShowPanel] = useState(false);
@@ -59,6 +61,14 @@ export const Header: React.FC<HeaderProps> = ({
   }, []);
 
   const term = searchTerm.trim().toLowerCase();
+
+  // Radar Ticker: latest ingested signals by publish time (fallback to top score)
+  const tickerItems: Signal[] = useMemo(() => {
+    if (!globalResults || globalResults.signals.length === 0) return [];
+    return [...globalResults.signals]
+      .sort((a, b) => new Date(b.publish_time).getTime() - new Date(a.publish_time).getTime())
+      .slice(0, 8);
+  }, [globalResults]);
 
   const results: GlobalResult[] = useMemo(() => {
     if (!term || !globalResults) return [];
@@ -132,6 +142,7 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   return (
+    <>
     <header className="bg-[#12151B] border-b border-[#1E232D] sticky top-0 z-50 px-4 py-2.5 flex flex-col md:flex-row items-center justify-between gap-3 shadow-md">
       {/* Brand & Logo */}
       <div className="flex items-center gap-3 w-full md:w-auto justify-between">
@@ -264,5 +275,45 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
     </header>
+
+    {/* Radar Ticker: latest ingested signal feed */}
+    {tickerItems.length > 0 && (
+      <div className="sticky top-[57px] z-40 bg-[#0B0D10] border-b border-[#1E232D] overflow-hidden">
+        <div className="flex items-stretch">
+          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-[#10B981]/10 border-r border-[#1E232D] text-[10px] font-mono-code font-bold text-[#10B981] whitespace-nowrap">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#10B981] opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-[#10B981]"></span>
+            </span>
+            LIVE
+          </div>
+          <div className="relative flex-1 overflow-hidden py-1.5">
+            <div className="animate-radar-ticker flex whitespace-nowrap w-max">
+              {[0, 1].map((copy) => (
+                <div key={copy} className="flex items-center">
+                  {tickerItems.map((sig) => {
+                    const label = language === 'en' ? (sig.title_en || sig.title_zh) : sig.title_zh;
+                    return (
+                      <button
+                        key={`${copy}-${sig.id}`}
+                        onClick={() => onSelectSignal?.(sig.id)}
+                        className="group inline-flex items-center gap-2 px-4 text-[11px] font-mono-code text-[#9CA3AF] hover:text-[#10B981] transition-colors cursor-pointer"
+                      >
+                        <span className="text-[#3B82F6]">◈</span>
+                        <span className="truncate max-w-[420px]">{label}</span>
+                        <span className={sig.radar_score >= 90 ? 'text-[#10B981] font-bold' : 'text-[#F59E0B]'}>
+                          {sig.radar_score.toFixed(1)}🔥
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 };

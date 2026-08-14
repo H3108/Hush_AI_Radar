@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ChevronDown, ChevronRight, ExternalLink, Flame, Link2, ShieldCheck, Zap } from 'lucide-react';
 import { EventCluster, Signal } from '../types';
 import { useLanguage } from '../i18n/LanguageContext';
@@ -12,6 +12,7 @@ interface SignalFeedProps {
   isLoading: boolean;
   clusters?: EventCluster[];
   onOpenCluster?: (clusterId: string) => void;
+  focusSignalId?: string | null;
 }
 
 export const SignalFeed: React.FC<SignalFeedProps> = ({
@@ -22,13 +23,22 @@ export const SignalFeed: React.FC<SignalFeedProps> = ({
   onMinScoreChange,
   isLoading,
   clusters = [],
-  onOpenCluster
+  onOpenCluster,
+  focusSignalId
 }) => {
   const [activeTooltipId, setActiveTooltipId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const { language, t } = useLanguage();
 
   const clusterById = new Map(clusters.map((c) => [c.id, c]));
+
+  // Externally triggered focus (e.g. Radar Ticker click) — expand + scroll to signal
+  useEffect(() => {
+    if (!focusSignalId) return;
+    setExpandedId(focusSignalId);
+    const el = document.getElementById(`signal-${focusSignalId}`);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [focusSignalId]);
 
   const categories: { id: string; label: string }[] = [
     { id: 'all', label: t.allSignals },
@@ -106,6 +116,7 @@ export const SignalFeed: React.FC<SignalFeedProps> = ({
             return (
               <div
                 key={sig.id}
+                id={`signal-${sig.id}`}
                 className="bg-[#12151B] hover:bg-[#161A22] border border-[#1E232D] hover:border-[#2B3545] p-3.5 rounded transition-all flex flex-col md:flex-row items-start md:items-center justify-between gap-4 relative group shadow-sm"
               >
                 {/* Left: Score Badge */}

@@ -20,6 +20,17 @@ import { addPipelineLog } from '../pipeline';
 export function createPublicRouter(): express.Router {
   const router = express.Router();
 
+  // 0. Health check (for Docker HEALTHCHECK / load balancer / uptime monitors)
+  router.get('/api/health', async (_req, res) => {
+    try {
+      const db = await import('../db');
+      await db.getSystemStats();
+      res.json({ status: 'ok', uptime: Math.round(process.uptime()), timestamp: new Date().toISOString() });
+    } catch (err: any) {
+      res.status(503).json({ status: 'degraded', error: err?.message || 'health check failed', timestamp: new Date().toISOString() });
+    }
+  });
+
   // 1. System Stats
   router.get('/api/stats', async (_req, res) => {
     try {

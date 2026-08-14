@@ -66,3 +66,21 @@
 .animate-radar-pulse {
   animation: radar-pulse 2s infinite ease-in-out;
 }
+
+/* Radar Ticker marquee (real-time latest signal feed) */
+@keyframes radar-ticker {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-radar-ticker {
+  animation: radar-ticker 40s linear infinite;
+}
+
+.animate-radar-ticker:hover {
+  animation-play-state: paused;
+}

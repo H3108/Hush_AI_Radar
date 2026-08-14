@@ -1,0 +1,32 @@
+[Unit]
+Description=Hush AI Radar — AI Intelligence Platform (production build)
+Documentation=https://github.com/H3108/Hush_AI_Radar
+After=network.target
+
+[Service]
+Type=simple
+User=radar
+WorkingDirectory=/opt/hush-ai-radar
+Environment=NODE_ENV=production
+Environment=PORT=3000
+EnvironmentFile=/opt/hush-ai-radar/.env
+ExecStart=/usr/bin/node dist/server.cjs
+Restart=on-failure
+RestartSec=5
+# 15s to bind port + initial scan; raise if the box is slow
+TimeoutStartSec=120
+
+# Hardening
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/opt/hush-ai-radar/data
+
+# Logging (handled by journald; ship to disk via logrotate unit if desired)
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=hush-ai-radar
+
+[Install]
+WantedBy=multi-user.target
