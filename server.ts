@@ -42,14 +42,18 @@ function isValidSessionToken(sessionId: string): boolean {
   return true;
 }
 
-const DEFAULT_ADMIN_TOKEN = 'hush_admin_secret_token_2026';
-
+/**
+ * Admin token is sourced exclusively from process.env.ADMIN_TOKEN.
+ * If unset, all admin authentication will be rejected (no insecure default).
+ */
 function isMatchingAdminToken(providedToken: string): boolean {
   if (!providedToken) return false;
-  const clean = providedToken.trim();
-  if (clean === DEFAULT_ADMIN_TOKEN) return true;
-  if (process.env.ADMIN_TOKEN && clean === process.env.ADMIN_TOKEN.trim()) return true;
-  return false;
+  const expected = process.env.ADMIN_TOKEN;
+  if (!expected) {
+    addPipelineLog('warn', '[Admin Console] ADMIN_TOKEN is not set in environment. Admin endpoints disabled.');
+    return false;
+  }
+  return providedToken.trim() === expected.trim();
 }
 
 /**
@@ -341,20 +345,42 @@ async function startServer() {
 
   // A. Admin Token Verification -> Issues Secure Session Cookie
   app.post('/api/admin/verify', (req, res) => {
-    const adminToken = (process.env.ADMIN_TOKEN || 'hush_admin_secret_token_2026').trim();
-    const rawProvided = req.body?.token || req.body?.adminToken || (req.headers.authorization ? req.headers.authorization.replace(/^Bearer\s+/i, '') : '');
-    const providedToken = typeof rawProvided === 'string' ? rawProvided.trim() : '';
-
-    if (isMatchingAdminToken(providedToken) || verifyAdminSession(req)) {
+    if (verifyAdminSession(req)) {
       const sessionId = createAdminSession();
-
       res.cookie('hush_admin_session', sessionId, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
-        maxAge: 24 * 60 * 60 * 1000 // 24 Hours
+        maxAge: 24 * 60 * 60 * 1000
       });
+      addPipelineLog('info', '[Admin Console] Admin re-authenticated via existing session. New session issued.');
+      return res.json({
+        success: true,
+        sessionToken: sessionId,
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+        message: 'Existing admin session verified. New secure cookie issued.'
+      });
+    }
 
+    if (!process.env.ADMIN_TOKEN) {
+      addPipelineLog('warn', '[Admin Console] Login rejected: ADMIN_TOKEN not configured in environment.');
+      return res.status(503).json({
+        error: 'Service unavailable: ADMIN_TOKEN is not configured. Set ADMIN_TOKEN in .env to enable admin access.',
+        configured: false
+      });
+    }
+
+    const rawProvided = req.body?.token || req.body?.adminToken || (req.headers.authorization ? req.headers.authorization.replace(/^Bearer\s+/i, '') : '');
+    const providedToken = typeof rawProvided === 'string' ? rawProvided.trim() : '';
+
+    if (isMatchingAdminToken(providedToken)) {
+      const sessionId = createAdminSession();
+      res.cookie('hush_admin_session', sessionId, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 24 * 60 * 60 * 1000
+      });
       addPipelineLog('info', '[Admin Console] Admin authenticated via ADMIN_TOKEN. Session created.');
       return res.json({
         success: true,
