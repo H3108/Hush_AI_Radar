@@ -179,7 +179,7 @@ export const DashboardVisualizer: React.FC<DashboardVisualizerProps> = ({
             <div className="text-2xl font-bold text-white mt-0.5 flex items-center gap-2">
               <span>{hotEventsCount}</span>
               <span className="text-[10px] bg-[#F59E0B]/20 text-[#F59E0B] px-1.5 py-0.2 rounded border border-[#F59E0B]/30 font-semibold">
-                Score ≥80
+                {t.hotScoreBadge}
               </span>
             </div>
             <div className="text-[10px] text-[#3B82F6] mt-1 truncate">
@@ -204,7 +204,7 @@ export const DashboardVisualizer: React.FC<DashboardVisualizerProps> = ({
               </span>
             </div>
             <div className="text-[10px] text-[#9CA3AF] mt-1 truncate">
-              {t.modelUpdates}: {modelUpdatesCount} · 数据源 {sources.length}
+              {t.modelUpdates}: {modelUpdatesCount} · {t.sourcesCount.replace('{n}', String(sources.length))}
             </div>
           </div>
           <div className="p-2.5 bg-[#06B6D4]/10 rounded border border-[#06B6D4]/20 text-[#06B6D4]">
@@ -226,12 +226,12 @@ export const DashboardVisualizer: React.FC<DashboardVisualizerProps> = ({
                 </span>
               ) : (
                 <span className="text-[10px] bg-[#10B981]/20 text-[#10B981] px-1.5 py-0.2 rounded border border-[#10B981]/30 font-semibold">
-                  100% Pass
+                  {t.passRateBadge}
                 </span>
               )}
             </div>
             <div className="text-[10px] text-[#9CA3AF] mt-1 truncate">
-              {stats?.engine?.model || 'Gemini'} Audit
+              {t.auditLabel.replace('{model}', stats?.engine?.model || 'Gemini')}
             </div>
           </div>
           <div className="p-2.5 bg-[#A855F7]/10 rounded border border-[#A855F7]/20 text-[#A855F7]">
@@ -258,7 +258,7 @@ export const DashboardVisualizer: React.FC<DashboardVisualizerProps> = ({
               <Sparkline data={item.spark} color="#3B82F6" width={44} height={18} />
               <span className={`font-bold ${item.momentum >= 0 ? 'text-[#10B981]' : 'text-[#EF4444]'}`}>{item.delta}</span>
               <span className="text-[9px] text-[#9CA3AF] bg-[#1E232D] px-1 rounded">
-                Score {item.heat}
+                {t.scorePill.replace('{n}', String(item.heat))}
               </span>
             </div>
           ))}
@@ -274,16 +274,16 @@ export const DashboardVisualizer: React.FC<DashboardVisualizerProps> = ({
         >
           <div className="flex items-center gap-1.5 text-[10px] font-mono-code text-[#F59E0B] uppercase tracking-wider mb-1.5">
             <Sparkles className="w-3 h-3" />
-            <span>今日极速摘要 / Today's Express</span>
+            <span>{t.todayExpressTitle}</span>
             <span className="ml-auto text-[#6B7280] normal-case">
               {dailyBrief?.generated_at ? new Date(dailyBrief.generated_at).toLocaleString() : ''}
             </span>
           </div>
           <div className="text-sm font-bold text-white group-hover:text-[#F59E0B] transition-colors line-clamp-1">
-            {dailyBrief?.headline || t.briefHeaderFallback || 'No daily brief generated yet'}
+            {dailyBrief?.headline || t.briefHeaderFallback}
           </div>
           <p className="text-[11px] text-[#9CA3AF] mt-1 line-clamp-2">
-            {dailyBrief?.executive_summary || 'Click to open the AI-generated daily intelligence briefing.'}
+            {dailyBrief?.executive_summary || t.dailyBriefHint}
           </p>
         </button>
 
@@ -291,7 +291,7 @@ export const DashboardVisualizer: React.FC<DashboardVisualizerProps> = ({
         <div className="bg-[#12151B] border border-[#A855F7]/30 rounded p-3">
           <div className="flex items-center gap-1.5 text-[10px] font-mono-code text-[#A855F7] uppercase tracking-wider mb-1.5">
             <Zap className="w-3 h-3" />
-            <span>Agent Skill 速取 / Quick Fetch</span>
+            <span>{t.agentSkillQuickFetch}</span>
             {skillManifest?.version && (
               <span className="ml-auto text-[#6B7280] normal-case">v{skillManifest.version} · {skillManifest.name}</span>
             )}
@@ -323,7 +323,7 @@ export const DashboardVisualizer: React.FC<DashboardVisualizerProps> = ({
         <div className="flex items-center justify-between border-b border-[#1E232D] pb-2">
           <div className="flex items-center gap-2 text-xs font-bold text-white">
             <Activity className="w-4 h-4 text-[#3B82F6]" />
-            <span>AI INTELLIGENCE RADAR ANALYTICS</span>
+            <span>{t.radarAnalyticsTitle}</span>
           </div>
           <div className="flex items-center gap-1 bg-[#0B0D10] p-1 border border-[#1E232D] rounded text-[11px]">
             <button
@@ -333,7 +333,7 @@ export const DashboardVisualizer: React.FC<DashboardVisualizerProps> = ({
               }`}
             >
               <TrendingUp className="w-3 h-3" />
-              <span>{t.trendChangesTitle.split('与')[0]}</span>
+              <span>{t.visTabTrend}</span>
             </button>
             <button
               onClick={() => setActiveVisTab('tags')}
@@ -342,7 +342,7 @@ export const DashboardVisualizer: React.FC<DashboardVisualizerProps> = ({
               }`}
             >
               <Tag className="w-3 h-3" />
-              <span>{t.hotTagsTitle.split('与')[0]}</span>
+              <span>{t.visTabTags}</span>
             </button>
             <button
               onClick={() => setActiveVisTab('sources')}
@@ -351,7 +351,7 @@ export const DashboardVisualizer: React.FC<DashboardVisualizerProps> = ({
               }`}
             >
               <Sparkles className="w-3 h-3" />
-              <span>{t.sourceRankingTitle.split('与')[0]}</span>
+              <span>{t.visTabSources}</span>
             </button>
           </div>
         </div>
@@ -361,7 +361,7 @@ export const DashboardVisualizer: React.FC<DashboardVisualizerProps> = ({
           <div className="space-y-3">
             <div className="text-[11px] text-[#9CA3AF] flex items-center justify-between">
               <span>{t.trendChangesTitle}</span>
-              <span className="text-[#6B7280]">{sources.length} Sources Ingest Ratio</span>
+              <span className="text-[#6B7280]">{t.sourcesIngestRatio.replace('{n}', String(sources.length))}</span>
             </div>
             {/* Category Activity Bars */}
             <div className="space-y-2">
@@ -374,7 +374,7 @@ export const DashboardVisualizer: React.FC<DashboardVisualizerProps> = ({
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-white group-hover:text-[#10B981] transition-colors">{cat.name}</span>
                     <div className="flex items-center gap-2">
-                      <span className="text-[#9CA3AF]">{cat.count} signals</span>
+                      <span className="text-[#9CA3AF]">{t.signalsCount.replace('{n}', String(cat.count))}</span>
                       <span className="text-white font-bold">{cat.pct}%</span>
                     </div>
                   </div>
@@ -420,7 +420,7 @@ export const DashboardVisualizer: React.FC<DashboardVisualizerProps> = ({
           <div className="space-y-2">
             <div className="text-[11px] text-[#9CA3AF] flex items-center justify-between">
               <span>{t.sourceRankingTitle}</span>
-              <span className="text-[#6B7280]">Top Ingested Feeds</span>
+              <span className="text-[#6B7280]">{t.topIngestedFeeds}</span>
             </div>
             <div className="space-y-2">
               {sourceRankings.map((src, idx) => {
@@ -435,7 +435,7 @@ export const DashboardVisualizer: React.FC<DashboardVisualizerProps> = ({
                           {t.sourceWeight}: {src.authority_weight}
                         </span>
                       </div>
-                      <span className="text-[#10B981] font-bold">{src.total_signals_ingested} signals</span>
+                      <span className="text-[#10B981] font-bold">{t.signalsCount.replace('{n}', String(src.total_signals_ingested))}</span>
                     </div>
                     <div className="w-full bg-[#0B0D10] h-1.5 rounded overflow-hidden border border-[#1E232D]">
                       <div

@@ -20,7 +20,7 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
 
   const formattedLastSync = stats?.last_sync_time
     ? new Date(stats.last_sync_time).toLocaleString()
-    : 'Auto Pipeline Active (15m Interval)';
+    : t.autoPipelineActive;
 
   const healthyCount = sources.filter((s) => s.status === 'active').length;
   const healthyPct = sources.length ? Math.round((healthyCount / sources.length) * 100) : 0;
@@ -28,17 +28,17 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
 
   const statusMeta: Record<string, { label: string; cls: string; icon: React.ReactNode }> = {
     active: {
-      label: 'ACTIVE',
+      label: t.statusActive,
       cls: 'bg-[#10B981]/10 text-[#10B981] border-[#10B981]/30',
       icon: <CheckCircle className="w-3 h-3" />
     },
     degraded: {
-      label: 'DEGRADED',
+      label: t.statusDegraded,
       cls: 'bg-[#F59E0B]/10 text-[#F59E0B] border-[#F59E0B]/30',
       icon: <Clock className="w-3 h-3" />
     },
     failing: {
-      label: 'FAILING',
+      label: t.statusFailing,
       cls: 'bg-[#EF4444]/10 text-[#EF4444] border-[#EF4444]/30',
       icon: <Activity className="w-3 h-3" />
     }
@@ -53,7 +53,7 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
             <span>{t.systemMonitorTitle}</span>
           </h2>
           <p className="text-xs text-[#6B7280] font-mono-code mt-0.5">
-            Real-time status of pipeline automation, {engineModel} inference, and SQLite storage.
+            {t.systemMonitorDesc.replace('{model}', engineModel)}
           </p>
         </div>
 
@@ -67,7 +67,7 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
               title="POST /api/admin/sync"
             >
               {isSyncing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
-              <span>{isSyncing ? 'SYNCING...' : t.triggerManualSync || 'MANUAL SYNC'}</span>
+              <span>{isSyncing ? t.syncingLabel : (t.triggerManualSync || 'MANUAL SYNC')}</span>
             </button>
           )}
           <div className="flex items-center gap-2 px-3 py-1.5 bg-[#1E232D] text-[#9CA3AF] border border-[#2B3545] rounded font-mono-code text-xs font-semibold">
@@ -86,7 +86,7 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
             <Activity className="w-4 h-4 text-[#10B981] animate-pulse" />
           </div>
           <div className="text-sm text-[#10B981] font-bold">● {t.radarStatusValue}</div>
-          <p className="text-[11px] text-[#6B7280]">Pipeline engine running in daemon mode</p>
+          <p className="text-[11px] text-[#6B7280]">{t.pipelineDaemonMode}</p>
         </div>
 
         {/* Last Sync Time */}
@@ -96,7 +96,7 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
             <Clock className="w-4 h-4 text-[#3B82F6]" />
           </div>
           <div className="text-sm text-white font-bold">{formattedLastSync}</div>
-          <p className="text-[11px] text-[#6B7280]">Background scanner checks RSS feeds</p>
+          <p className="text-[11px] text-[#6B7280]">{t.bgScannerChecks}</p>
         </div>
 
         {/* Source Health */}
@@ -106,7 +106,7 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
             <ShieldCheck className="w-4 h-4 text-[#F59E0B]" />
           </div>
           <div className="text-sm text-white font-bold">{stats?.sources_healthy ?? healthyCount} / {stats?.sources_total ?? sources.length} ({t.active})</div>
-          <p className="text-[11px] text-[#6B7280]">{healthyPct}% curated feeds currently healthy</p>
+          <p className="text-[11px] text-[#6B7280]">{t.feedsHealthyPct.replace('{n}', String(healthyPct))}</p>
         </div>
       </div>
 
@@ -115,28 +115,28 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
         <div className="text-white font-bold flex items-center justify-between border-b border-[#1E232D] pb-2">
           <div className="flex items-center gap-2">
             <Database className="w-4 h-4 text-[#06B6D4]" />
-            <span>DATABASE ENGINE & ADMIN SYNC ENDPOINT</span>
+            <span>{t.dbEngineTitle}</span>
           </div>
           <span className="text-[10px] text-[#10B981] bg-[#10B981]/10 px-2 py-0.5 border border-[#10B981]/30 rounded">
-            ADMIN VERIFICATION REQUIRED
+            {t.adminVerificationRequired}
           </span>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-[#9CA3AF]">
           <div>
-            <span className="text-[#6B7280]">Storage Driver:</span>
+            <span className="text-[#6B7280]">{t.storageDriverLabel}</span>
             <div className="text-white font-bold">{stats?.db_type || 'SQLite WASM Persistent'}</div>
           </div>
           <div>
-            <span className="text-[#6B7280]">AI Model:</span>
+            <span className="text-[#6B7280]">{t.aiModelLabel}</span>
             <div className="text-[#10B981] font-bold">{engineModel} (@google/genai)</div>
           </div>
           <div>
-            <span className="text-[#6B7280]">Admin Sync Route:</span>
+            <span className="text-[#6B7280]">{t.adminSyncRoute}</span>
             <div className="text-[#3B82F6] font-bold">POST /api/admin/sync</div>
           </div>
         </div>
         <div className="p-2.5 bg-[#0B0D10] border border-[#1E232D] rounded text-[11px] text-[#9CA3AF] space-y-1">
-          <div className="text-white font-semibold">🔒 Hidden Admin Sync Triggering Example:</div>
+          <div className="text-white font-semibold">{t.hiddenAdminSyncExample}</div>
           <code className="block text-[#10B981] overflow-x-auto p-1 bg-[#161A22] rounded">
             curl -X POST &quot;https://your-domain/api/admin/sync&quot; -H &quot;Authorization: Bearer YOUR_ADMIN_TOKEN&quot;
           </code>
@@ -146,20 +146,20 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
       {/* 18 Curated Sources Health Table */}
       <div className="bg-[#12151B] border border-[#1E232D] rounded overflow-x-auto">
         <div className="p-3 bg-[#0B0D10] border-b border-[#1E232D] font-mono-code text-xs text-white font-bold flex items-center justify-between">
-          <span>CURATED INTELLIGENCE SOURCES ({sources.length} TOP-TIER SOURCES)</span>
+          <span>{t.curatedSourcesTitle.replace('{n}', String(sources.length))}</span>
           <span className={healthyPct === 100 ? 'text-[#10B981]' : healthyPct >= 80 ? 'text-[#F59E0B]' : 'text-[#EF4444]'}>
-            {healthyPct}% HEALTHY
+            {t.healthyPctLabel.replace('{n}', String(healthyPct))}
           </span>
         </div>
         <table className="w-full text-left border-collapse text-xs font-mono-code">
           <thead>
             <tr className="border-b border-[#1E232D] text-[#6B7280] uppercase">
-              <th className="p-3">SOURCE NAME</th>
-              <th className="p-3">CATEGORY</th>
-              <th className="p-3">AUTHORITY WEIGHT</th>
-              <th className="p-3">SIGNALS INGESTED</th>
-              <th className="p-3">LATENCY</th>
-              <th className="p-3">STATUS</th>
+              <th className="p-3">{t.colSourceName}</th>
+              <th className="p-3">{t.colCategory}</th>
+              <th className="p-3">{t.colAuthorityWeight}</th>
+              <th className="p-3">{t.colSignalsIngested}</th>
+              <th className="p-3">{t.colLatency}</th>
+              <th className="p-3">{t.colStatus}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[#1E232D]">
@@ -188,7 +188,7 @@ export const SystemMonitor: React.FC<SystemMonitorProps> = ({
                 <td className="p-3">
                   <span className={`inline-flex items-center gap-1 px-2 py-0.5 border rounded text-[10px] font-bold ${statusMeta[s.status]?.cls || statusMeta.active.cls}`}>
                     {statusMeta[s.status]?.icon || <CheckCircle className="w-3 h-3" />}
-                    {statusMeta[s.status]?.label || 'ACTIVE'}
+                    {statusMeta[s.status]?.label || t.statusActive}
                   </span>
                 </td>
               </tr>

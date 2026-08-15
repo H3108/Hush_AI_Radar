@@ -40,7 +40,7 @@ export const Header: React.FC<HeaderProps> = ({
 
   const formattedLastSync = stats?.last_sync_time
     ? new Date(stats.last_sync_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    : 'Auto (15m)';
+    : t.lastSyncFallback;
 
   // Cmd+K / Ctrl+K focuses the global search box and opens the result panel
   useEffect(() => {
@@ -82,7 +82,7 @@ export const Header: React.FC<HeaderProps> = ({
     }
     for (const c of globalResults.clusters) {
       if (match(c.title) || match(c.title_en || '') || match(c.summary)) {
-        out.push({ kind: 'cluster', label: c.title, sub: `${c.related_signal_ids.length} signals · ${c.hot_score} 🔥`, tab: 'clusters' });
+        out.push({ kind: 'cluster', label: c.title, sub: `${t.signalsCount.replace('{n}', String(c.related_signal_ids.length))} · ${c.hot_score} 🔥`, tab: 'clusters' });
       }
     }
     for (const m of globalResults.models) {
@@ -216,14 +216,14 @@ export const Header: React.FC<HeaderProps> = ({
         {showPanel && term && results.length > 0 && (
           <div className="absolute top-full left-0 right-0 mt-1 bg-[#12151B] border border-[#2B3545] rounded shadow-xl overflow-hidden max-h-96 overflow-y-auto z-50">
             <div className="px-3 py-1.5 text-[10px] font-mono-code text-[#6B7280] font-semibold uppercase border-b border-[#1E232D] bg-[#0B0D10]">
-              {results.length} results across Signals / Clusters / Models — ↑↓ 选择 · Enter 跳转
+              {t.searchResultsSummary.replace('{n}', String(results.length))}
             </div>
             {results.map(renderResult)}
           </div>
         )}
         {showPanel && term && results.length === 0 && (
           <div className="absolute top-full left-0 right-0 mt-1 bg-[#12151B] border border-[#2B3545] rounded shadow-xl p-4 text-center text-xs text-[#6B7280] font-mono-code z-50">
-            No matches across signals, clusters, or models.
+            {t.searchNoMatches}
           </div>
         )}
       </div>

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ChevronDown, ChevronRight, ExternalLink, Flame, Link2, ShieldCheck, Zap } from 'lucide-react';
 import { EventCluster, Signal } from '../types';
 import { useLanguage } from '../i18n/LanguageContext';
+import { Translations } from '../i18n/translations';
 
 interface SignalFeedProps {
   signals: Signal[];
@@ -77,19 +78,19 @@ export const SignalFeed: React.FC<SignalFeedProps> = ({
             onClick={() => onMinScoreChange(0)}
             className={`px-2 py-0.5 rounded cursor-pointer ${minScoreFilter === 0 ? 'bg-[#1E232D] text-white font-semibold' : 'text-[#6B7280]'}`}
           >
-            All
+            {t.filterAll}
           </button>
           <button
             onClick={() => onMinScoreChange(80)}
             className={`px-2 py-0.5 rounded cursor-pointer ${minScoreFilter === 80 ? 'bg-[#F59E0B]/20 text-[#F59E0B] font-semibold border border-[#F59E0B]/30' : 'text-[#6B7280]'}`}
           >
-            🔥 Hot ≥80
+            {t.hotThreshold}
           </button>
           <button
             onClick={() => onMinScoreChange(90)}
             className={`px-2 py-0.5 rounded cursor-pointer ${minScoreFilter === 90 ? 'bg-[#10B981]/20 text-[#10B981] font-semibold border border-[#10B981]/30' : 'text-[#6B7280]'}`}
           >
-            ⚡ Critical ≥90
+            {t.criticalThreshold}
           </button>
         </div>
       </div>
@@ -137,7 +138,7 @@ export const SignalFeed: React.FC<SignalFeedProps> = ({
                       {isHot && !isCritical && <Flame className="w-3 h-3 mr-0.5 fill-[#F59E0B]" />}
                       <span>{sig.radar_score.toFixed(1)}</span>
                     </div>
-                    <span className="text-[9px] uppercase tracking-wider text-[#6B7280]">SCORE</span>
+                    <span className="text-[9px] uppercase tracking-wider text-[#6B7280]">{t.scoreLabel}</span>
 
                     {/* Score Breakdown Tooltip */}
                     {activeTooltipId === sig.id && (
@@ -171,7 +172,7 @@ export const SignalFeed: React.FC<SignalFeedProps> = ({
                       <ShieldCheck className="w-3 h-3" />
                       {sig.confidence_score}% {t.agentConfidence}
                     </span>
-                    <span>{getRelativeTime(sig.publish_time)}</span>
+                    <span>{getRelativeTime(sig.publish_time, t)}</span>
                   </div>
                 </div>
 
@@ -218,8 +219,8 @@ export const SignalFeed: React.FC<SignalFeedProps> = ({
                             className="flex items-center gap-2 px-2.5 py-1.5 rounded bg-[#10B981]/10 border border-[#10B981]/30 text-[#10B981] text-xs font-mono-code hover:bg-[#10B981]/20 transition-colors cursor-pointer"
                           >
                             <Link2 className="w-3.5 h-3.5" />
-                            {language === 'en' && cluster.title_en ? `Cluster: ${cluster.title_en}` : `关联事件簇: ${cluster.title}`}
-                            <span className="text-[10px] text-[#9CA3AF]">({cluster.related_signal_ids.length} signals)</span>
+                            {t.clusterLinkLabel.replace('{title}', language === 'en' && cluster.title_en ? cluster.title_en : cluster.title)}
+                            <span className="text-[10px] text-[#9CA3AF]">({t.signalsCount.replace('{n}', String(cluster.related_signal_ids.length))})</span>
                           </button>
                         ) : null;
                       })()}
@@ -246,7 +247,7 @@ export const SignalFeed: React.FC<SignalFeedProps> = ({
                         <span>{t.aiImpact}: {sig.score_breakdown.ai_impact_score}</span>
                         <span>{t.communitySignal}: {sig.score_breakdown.community_signal}</span>
                         <span>{t.sourceAuth}: {sig.score_breakdown.source_authority}</span>
-                        <span>Publish: {new Date(sig.publish_time).toLocaleString()}</span>
+                        <span>{t.publishLabel}: {new Date(sig.publish_time).toLocaleString()}</span>
                       </div>
                     </div>
                   )}
@@ -273,16 +274,16 @@ export const SignalFeed: React.FC<SignalFeedProps> = ({
   );
 };
 
-function getRelativeTime(isoDateStr: string): string {
+function getRelativeTime(isoDateStr: string, t: Translations): string {
   try {
     const diffMs = Date.now() - new Date(isoDateStr).getTime();
     const diffMins = Math.floor(diffMs / (1000 * 60));
-    if (diffMins < 60) return `${Math.max(1, diffMins)}m ago`;
+    if (diffMins < 60) return t.relativeMinutesAgo.replace('{n}', String(Math.max(1, diffMins)));
     const diffHours = Math.floor(diffMins / 60);
-    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffHours < 24) return t.relativeHoursAgo.replace('{n}', String(diffHours));
     const diffDays = Math.floor(diffHours / 24);
-    return `${diffDays}d ago`;
+    return t.relativeDaysAgo.replace('{n}', String(diffDays));
   } catch {
-    return 'recently';
+    return t.relativeJustNow;
   }
 }

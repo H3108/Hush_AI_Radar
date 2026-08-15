@@ -25,7 +25,7 @@ export const ReviewQueueView: React.FC<ReviewQueueViewProps> = ({
             <span>{t.reviewQueueTitle}</span>
           </h2>
           <p className="text-xs text-[#6B7280] font-mono-code mt-0.5">
-            Signals with Confidence Score &lt; 65% or marketing hype are routed here for review before publishing.
+            {t.reviewQueueDesc}
           </p>
         </div>
         <span className="px-2 py-1 text-xs font-mono-code bg-[#EF4444]/10 text-[#EF4444] border border-[#EF4444]/30 rounded font-bold">
@@ -35,7 +35,7 @@ export const ReviewQueueView: React.FC<ReviewQueueViewProps> = ({
 
       {isLoading ? (
         <div className="p-12 text-center font-mono-code text-xs text-[#9CA3AF]">
-          Loading Review Queue...
+          {t.loadingReviewQueue}
         </div>
       ) : pendingSignals.length === 0 ? (
         <div className="p-12 text-center font-mono-code text-xs text-[#10B981] bg-[#12151B] border border-[#10B981]/30 rounded space-y-2">
@@ -58,13 +58,13 @@ export const ReviewQueueView: React.FC<ReviewQueueViewProps> = ({
                 <div className="flex items-center gap-2 px-3 py-1.5 bg-[#EF4444]/10 border border-[#EF4444]/30 rounded text-xs font-mono-code text-[#EF4444]">
                   <AlertTriangle className="w-4 h-4 flex-shrink-0" />
                   <span className="font-bold">{t.flagReason}:</span>
-                  <span>{sig.review_reason || 'Agent Confidence score below quality threshold.'}</span>
+                  <span>{sig.review_reason || t.reviewReasonFallback}</span>
                 </div>
 
                 {/* Item Details */}
                 <div className="space-y-1">
                   <div className="text-sm font-bold text-white font-sans">{displayTitle}</div>
-                  <div className="text-xs text-[#6B7280] font-mono-code">Original: {sig.title_raw}</div>
+                  <div className="text-xs text-[#6B7280] font-mono-code">{t.originalLabel}: {sig.title_raw}</div>
                   <p className="text-xs text-[#9CA3AF] leading-relaxed font-sans bg-[#0B0D10] p-2.5 rounded border border-[#1E232D]">
                     {displaySummary}
                   </p>
@@ -73,9 +73,9 @@ export const ReviewQueueView: React.FC<ReviewQueueViewProps> = ({
                 {/* Metrics & Actions */}
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-2 border-t border-[#1E232D] text-xs font-mono-code">
                   <div className="flex items-center gap-3 text-[#6B7280] flex-wrap">
-                    <span>Source: <strong className="text-white">{sig.source_name}</strong></span>
-                    <span>Confidence: <strong className="text-[#EF4444]">{sig.confidence_score}%</strong></span>
-                    <span>Heat Score: <strong className="text-[#F59E0B]">{sig.radar_score}</strong></span>
+                    <span>{t.sourceLabel}: <strong className="text-white">{sig.source_name}</strong></span>
+                    <span>{t.confidenceLabel}: <strong className="text-[#EF4444]">{sig.confidence_score}%</strong></span>
+                    <span>{t.heatScoreLabel}: <strong className="text-[#F59E0B]">{sig.radar_score}</strong></span>
                   </div>
 
                   <div className="flex items-center gap-2 flex-wrap">

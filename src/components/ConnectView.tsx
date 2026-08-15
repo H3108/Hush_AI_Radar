@@ -143,7 +143,7 @@ paths:
             <span>{t.groupConnect || 'CONNECT 开放连接中心'}</span>
           </h2>
           <p className="text-xs text-[#6B7280] mt-0.5">
-            External API, RSS Feed Subscription, and AI Agent Skill Interfaces.
+            {t.connectDesc}
           </p>
         </div>
 
@@ -195,8 +195,8 @@ paths:
               <div className="flex items-center gap-2">
                 <Rss className="w-5 h-5 text-[#F97316]" />
                 <div>
-                  <h3 className="text-sm font-bold text-white uppercase">RSS 2.0 Feed Subscription</h3>
-                  <span className="text-xs text-[#6B7280]">Standard RSS XML for Feed Readers & Automation Daemons</span>
+                  <h3 className="text-sm font-bold text-white uppercase">{t.rssFeedTitle}</h3>
+                  <span className="text-xs text-[#6B7280]">{t.rssFeedDesc}</span>
                 </div>
               </div>
               <span className="px-2 py-0.5 rounded text-xs bg-[#10B981]/15 text-[#10B981] border border-[#10B981]/30 font-bold">
@@ -208,7 +208,7 @@ paths:
             <div className="p-3 bg-[#0B0D10] border border-[#1E232D] rounded flex flex-col sm:flex-row items-center justify-between gap-3">
               <div className="flex items-center gap-2 text-xs text-[#D1D5DB] overflow-x-auto w-full">
                 <Globe className="w-4 h-4 text-[#F97316] flex-shrink-0" />
-                <span className="text-[#9CA3AF]">Endpoint:</span>
+                <span className="text-[#9CA3AF]">{t.endpointLabel}</span>
                 <span className="text-[#10B981] font-bold underline select-all">{rssUrl}</span>
               </div>
 
@@ -218,7 +218,7 @@ paths:
                   className="px-3 py-1.5 bg-[#1E232D] hover:bg-[#2B3545] text-white rounded text-xs flex items-center gap-1.5 cursor-pointer border border-[#2B3545]"
                 >
                   {copiedSection === 'rss_url' ? <Check className="w-3.5 h-3.5 text-[#10B981]" /> : <Copy className="w-3.5 h-3.5" />}
-                  <span>{copiedSection === 'rss_url' ? t.copied : 'Copy Feed Link'}</span>
+                  <span>{copiedSection === 'rss_url' ? t.copied : t.copyFeedLink}</span>
                 </button>
 
                 <a
@@ -228,7 +228,7 @@ paths:
                   className="px-3 py-1.5 bg-[#F97316]/20 text-[#F97316] hover:bg-[#F97316]/30 border border-[#F97316]/40 rounded text-xs flex items-center gap-1.5 cursor-pointer"
                 >
                   <ExternalLink className="w-3.5 h-3.5" />
-                  <span>Open RSS XML</span>
+                  <span>{t.openRssXml}</span>
                 </a>
               </div>
             </div>
@@ -241,15 +241,15 @@ paths:
               </div>
               <div className="p-2.5 bg-[#0B0D10] border border-[#1E232D] rounded text-center">
                 <div className="text-white font-bold">Feedly</div>
-                <div className="text-[10px] text-[#6B7280]">Web / Mobile</div>
+                <div className="text-[10px] text-[#6B7280]">{t.readerWebMobile}</div>
               </div>
               <div className="p-2.5 bg-[#0B0D10] border border-[#1E232D] rounded text-center">
                 <div className="text-white font-bold">Reeder 5</div>
-                <div className="text-[10px] text-[#6B7280]">Apple Ecosystem</div>
+                <div className="text-[10px] text-[#6B7280]">{t.readerAppleEco}</div>
               </div>
               <div className="p-2.5 bg-[#0B0D10] border border-[#1E232D] rounded text-center">
                 <div className="text-white font-bold">Readwise Reader</div>
-                <div className="text-[10px] text-[#6B7280]">AI Document Hub</div>
+                <div className="text-[10px] text-[#6B7280]">{t.readerAiDocHub}</div>
               </div>
             </div>
           </div>
@@ -264,12 +264,12 @@ paths:
               <div className="flex items-center gap-2">
                 <Code className="w-5 h-5 text-[#06B6D4]" />
                 <div>
-                  <h3 className="text-sm font-bold text-white uppercase">Hush AI Radar Open API (v1)</h3>
-                  <span className="text-xs text-[#6B7280]">Public JSON Endpoints for AI Agents & Custom Dashboard Widgets</span>
+                  <h3 className="text-sm font-bold text-white uppercase">{t.openApiTitle}</h3>
+                  <span className="text-xs text-[#6B7280]">{t.openApiDesc}</span>
                 </div>
               </div>
               <span className="px-2 py-0.5 rounded text-xs bg-[#06B6D4]/15 text-[#06B6D4] border border-[#06B6D4]/30 font-bold">
-                NO API KEY REQUIRED
+                {t.noApiKey}
               </span>
             </div>
 
@@ -281,10 +281,10 @@ paths:
                     <span className="px-1.5 py-0.5 bg-[#10B981]/20 text-[#10B981] font-bold rounded text-[10px]">GET</span>
                     <span className="text-white font-bold">/api/v1/signals/latest</span>
                   </div>
-                  <span className="text-[#6B7280] text-[11px]">Latest AI intelligence signals</span>
+                  <span className="text-[#6B7280] text-[11px]">{t.apiSignalsDesc}</span>
                 </div>
                 <p className="text-[11px] text-[#9CA3AF]">
-                  Query parameters: <code className="text-[#06B6D4]">limit</code> (default 20), <code className="text-[#06B6D4]">category</code> (all, giants, opensource, paper, product, media).
+                  {t.queryParams} <code className="text-[#06B6D4]">limit</code> {t.paramDefault}, <code className="text-[#06B6D4]">category</code> (all, giants, opensource, paper, product, media).
                 </p>
               </div>
 
@@ -294,7 +294,7 @@ paths:
                     <span className="px-1.5 py-0.5 bg-[#10B981]/20 text-[#10B981] font-bold rounded text-[10px]">GET</span>
                     <span className="text-white font-bold">/api/v1/clusters/latest</span>
                   </div>
-                  <span className="text-[#6B7280] text-[11px]">Active grouped event clusters</span>
+                  <span className="text-[#6B7280] text-[11px]">{t.apiClustersDesc}</span>
                 </div>
               </div>
 
@@ -304,7 +304,7 @@ paths:
                     <span className="px-1.5 py-0.5 bg-[#10B981]/20 text-[#10B981] font-bold rounded text-[10px]">GET</span>
                     <span className="text-white font-bold">/api/v1/models/latest</span>
                   </div>
-                  <span className="text-[#6B7280] text-[11px]">Curated model & ArXiv database entries</span>
+                  <span className="text-[#6B7280] text-[11px]">{t.apiModelsDesc}</span>
                 </div>
               </div>
             </div>
@@ -313,13 +313,13 @@ paths:
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
               <div className="bg-[#0B0D10] border border-[#1E232D] rounded p-3 space-y-2">
                 <div className="flex items-center justify-between text-xs text-[#06B6D4]">
-                  <span className="font-bold">cURL Signals Request</span>
+                  <span className="font-bold">{t.curlSignalsTitle}</span>
                   <button
                     onClick={() => handleCopy(curlSignals, 'curl_sig')}
                     className="text-[#9CA3AF] hover:text-white flex items-center gap-1 text-[11px]"
                   >
                     {copiedSection === 'curl_sig' ? <Check className="w-3.5 h-3.5 text-[#10B981]" /> : <Copy className="w-3.5 h-3.5" />}
-                    <span>{copiedSection === 'curl_sig' ? t.copied : 'Copy'}</span>
+                    <span>{copiedSection === 'curl_sig' ? t.copied : t.copyLabel}</span>
                   </button>
                 </div>
                 <pre className="p-2.5 bg-[#12151B] border border-[#1E232D] rounded text-[11px] text-[#10B981] overflow-x-auto">
@@ -329,13 +329,13 @@ paths:
 
               <div className="bg-[#0B0D10] border border-[#1E232D] rounded p-3 space-y-2">
                 <div className="flex items-center justify-between text-xs text-[#06B6D4]">
-                  <span className="font-bold">cURL Clusters Request</span>
+                  <span className="font-bold">{t.curlClustersTitle}</span>
                   <button
                     onClick={() => handleCopy(curlClusters, 'curl_cls')}
                     className="text-[#9CA3AF] hover:text-white flex items-center gap-1 text-[11px]"
                   >
                     {copiedSection === 'curl_cls' ? <Check className="w-3.5 h-3.5 text-[#10B981]" /> : <Copy className="w-3.5 h-3.5" />}
-                    <span>{copiedSection === 'curl_cls' ? t.copied : 'Copy'}</span>
+                    <span>{copiedSection === 'curl_cls' ? t.copied : t.copyLabel}</span>
                   </button>
                 </div>
                 <pre className="p-2.5 bg-[#12151B] border border-[#1E232D] rounded text-[11px] text-[#10B981] overflow-x-auto">
@@ -355,8 +355,8 @@ paths:
               <div className="flex items-center gap-2">
                 <Cpu className="w-5 h-5 text-[#A855F7]" />
                 <div>
-                  <h3 className="text-sm font-bold text-white uppercase">Agent Skill & Integration Hub</h3>
-                  <span className="text-xs text-[#6B7280]">Connect Claude Code, Cursor, Custom GPTs, and LangChain Agents</span>
+                  <h3 className="text-sm font-bold text-white uppercase">{t.skillHubTitle}</h3>
+                  <span className="text-xs text-[#6B7280]">{t.skillHubDesc}</span>
                 </div>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
@@ -368,7 +368,7 @@ paths:
                   }`}
                 >
                   {manifestLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Zap className="w-3 h-3" />}
-                  {manifestError ? 'MANIFEST OFFLINE' : `MANIFEST v${skillManifest?.version || '?'} LIVE`}
+                  {manifestError ? t.manifestOffline : t.manifestLive.replace('{n}', skillManifest?.version || '?')}
                 </span>
                 <button
                   onClick={handleDownloadSkill}
@@ -376,7 +376,7 @@ paths:
                   className="px-3 py-1.5 bg-[#A855F7]/20 hover:bg-[#A855F7]/30 disabled:opacity-50 text-[#A855F7] border border-[#A855F7]/40 rounded text-xs flex items-center gap-1.5 cursor-pointer font-bold"
                 >
                   {copiedSection === 'skill_download' ? <Check className="w-3.5 h-3.5 text-[#10B981]" /> : <Download className="w-3.5 h-3.5" />}
-                  <span>{copiedSection === 'skill_download' ? 'Saved!' : 'Download Skill JSON'}</span>
+                  <span>{copiedSection === 'skill_download' ? t.savedLabel : t.downloadSkillJson}</span>
                 </button>
               </div>
             </div>
@@ -387,13 +387,13 @@ paths:
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-white font-bold flex items-center gap-1.5">
                     <Zap className="w-4 h-4 text-[#A855F7]" />
-                    Live Manifest Endpoints (GET /api/agent/skill)
+                    {t.liveManifestEndpoints}
                   </span>
                   <button
                     onClick={() => loadSkillManifest()}
                     className="text-[#9CA3AF] hover:text-white text-[11px] flex items-center gap-1 cursor-pointer"
                   >
-                    <Rss className="w-3 h-3" /> Refresh
+                    <Rss className="w-3 h-3" /> {t.refreshLabel}
                   </button>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5">
@@ -421,14 +421,14 @@ paths:
                 <div className="flex items-center justify-between text-xs text-[#A855F7]">
                   <span className="font-bold flex items-center gap-1.5">
                     <Terminal className="w-4 h-4" />
-                    Claude Code Skill Config
+                    {t.claudeSkillConfig}
                   </span>
                   <button
                     onClick={() => handleCopy(claudeCodeSkill, 'claude')}
                     className="text-[#9CA3AF] hover:text-white flex items-center gap-1 text-[11px]"
                   >
                     {copiedSection === 'claude' ? <Check className="w-3.5 h-3.5 text-[#10B981]" /> : <Copy className="w-3.5 h-3.5" />}
-                    <span>{copiedSection === 'claude' ? t.copied : 'Copy'}</span>
+                    <span>{copiedSection === 'claude' ? t.copied : t.copyLabel}</span>
                   </button>
                 </div>
                 <pre className="p-2.5 bg-[#12151B] border border-[#1E232D] rounded text-[11px] text-[#A855F7] overflow-x-auto">
@@ -441,14 +441,14 @@ paths:
                 <div className="flex items-center justify-between text-xs text-[#3B82F6]">
                   <span className="font-bold flex items-center gap-1.5">
                     <Code className="w-4 h-4" />
-                    Cursor Rules (.cursor/rules)
+                    {t.cursorRules}
                   </span>
                   <button
                     onClick={() => handleCopy(cursorRule, 'cursor')}
                     className="text-[#9CA3AF] hover:text-white flex items-center gap-1 text-[11px]"
                   >
                     {copiedSection === 'cursor' ? <Check className="w-3.5 h-3.5 text-[#10B981]" /> : <Copy className="w-3.5 h-3.5" />}
-                    <span>{copiedSection === 'cursor' ? t.copied : 'Copy'}</span>
+                    <span>{copiedSection === 'cursor' ? t.copied : t.copyLabel}</span>
                   </button>
                 </div>
                 <pre className="p-2.5 bg-[#12151B] border border-[#1E232D] rounded text-[11px] text-[#3B82F6] overflow-x-auto">
@@ -461,13 +461,13 @@ paths:
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="bg-[#0B0D10] border border-[#1E232D] rounded p-3.5 space-y-2">
                 <div className="flex items-center justify-between text-xs text-[#10B981]">
-                  <span className="font-bold">Python LangChain / AutoGPT Integration</span>
+                  <span className="font-bold">{t.pythonIntegrationTitle}</span>
                   <button
                     onClick={() => handleCopy(pythonSnippet, 'python')}
                     className="text-[#9CA3AF] hover:text-white flex items-center gap-1 text-[11px]"
                   >
                     {copiedSection === 'python' ? <Check className="w-3.5 h-3.5 text-[#10B981]" /> : <Copy className="w-3.5 h-3.5" />}
-                    <span>{copiedSection === 'python' ? t.copied : 'Copy'}</span>
+                    <span>{copiedSection === 'python' ? t.copied : t.copyLabel}</span>
                   </button>
                 </div>
                 <pre className="p-2.5 bg-[#12151B] border border-[#1E232D] rounded text-[11px] text-[#10B981] overflow-x-auto">
@@ -477,13 +477,13 @@ paths:
 
               <div className="bg-[#0B0D10] border border-[#1E232D] rounded p-3.5 space-y-2">
                 <div className="flex items-center justify-between text-xs text-[#EAB308]">
-                  <span className="font-bold">OpenAPI 3.1 YAML Schema</span>
+                  <span className="font-bold">{t.openApiYamlTitle}</span>
                   <button
                     onClick={() => handleCopy(openApiYaml, 'openapi')}
                     className="text-[#9CA3AF] hover:text-white flex items-center gap-1 text-[11px]"
                   >
                     {copiedSection === 'openapi' ? <Check className="w-3.5 h-3.5 text-[#10B981]" /> : <Copy className="w-3.5 h-3.5" />}
-                    <span>{copiedSection === 'openapi' ? t.copied : 'Copy Schema'}</span>
+                    <span>{copiedSection === 'openapi' ? t.copied : t.copySchema}</span>
                   </button>
                 </div>
                 <pre className="p-2.5 bg-[#12151B] border border-[#1E232D] rounded text-[11px] text-[#EAB308] overflow-x-auto max-h-[140px]">

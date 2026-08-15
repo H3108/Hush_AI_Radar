@@ -74,7 +74,7 @@ export const ModelsPapersView: React.FC<ModelsPapersViewProps> = ({
             <span>{filterType === 'paper' ? (t.navPapers || '论文库') : filterType === 'model' ? (t.navModels || '模型库') : (t.modelsDbTitle || 'AI 知识资产库')}</span>
           </h2>
           <p className="text-xs text-[#6B7280] font-mono-code mt-0.5">
-            Curated repository of breakthrough AI models, ArXiv papers, and open-source infrastructure.
+            {t.modelsDbDesc}
           </p>
         </div>
 
@@ -88,7 +88,7 @@ export const ModelsPapersView: React.FC<ModelsPapersViewProps> = ({
                 : 'text-[#6B7280] hover:text-white'
             }`}
           >
-            ALL ({items.length})
+            {t.filterAllLabel.replace('{n}', String(items.length))}
           </button>
           <button
             onClick={() => setFilterType('model')}
@@ -122,7 +122,7 @@ export const ModelsPapersView: React.FC<ModelsPapersViewProps> = ({
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search name, org, breakthrough, benchmark..."
+            placeholder={t.searchModelsPlaceholder}
             className="flex-1 bg-transparent text-xs font-mono-code text-white placeholder-[#4B5563] outline-none"
           />
           {search && (
@@ -139,17 +139,17 @@ export const ModelsPapersView: React.FC<ModelsPapersViewProps> = ({
             onChange={(e) => setSortKey(e.target.value as SortKey)}
             className="bg-transparent text-[#D1D5DB] text-xs font-mono-code outline-none cursor-pointer py-1"
           >
-            <option value="score_desc">Score ↓</option>
-            <option value="score_asc">Score ↑</option>
-            <option value="date_desc">Date ↓</option>
-            <option value="date_asc">Date ↑</option>
-            <option value="name_asc">Name A-Z</option>
+            <option value="score_desc">{t.sortScoreDesc}</option>
+            <option value="score_asc">{t.sortScoreAsc}</option>
+            <option value="date_desc">{t.sortDateDesc}</option>
+            <option value="date_asc">{t.sortDateAsc}</option>
+            <option value="name_asc">{t.sortNameAsc}</option>
           </select>
         </div>
 
         {compareIds.length > 0 && (
           <span className="text-[10px] font-mono-code text-[#F59E0B] bg-[#F59E0B]/10 border border-[#F59E0B]/30 rounded px-2 py-1">
-            {compareIds.length}/3 compared
+            {t.comparedCount.replace('{n}', String(compareIds.length))}
           </span>
         )}
       </div>
@@ -158,26 +158,26 @@ export const ModelsPapersView: React.FC<ModelsPapersViewProps> = ({
       {compareItems.length >= 2 && (
         <div className="bg-[#12151B] border border-[#F59E0B]/40 rounded overflow-x-auto">
           <div className="p-2.5 border-b border-[#F59E0B]/30 font-mono-code text-[11px] text-[#F59E0B] font-bold flex items-center justify-between">
-            <span>⚖️ QUANT COMPARISON // 量化对比 ({compareItems.length})</span>
+            <span>{t.quantComparisonTitle.replace('{n}', String(compareItems.length))}</span>
             <button onClick={() => setCompareIds([])} className="text-[#9CA3AF] hover:text-white flex items-center gap-1 cursor-pointer text-[10px]">
-              <X className="w-3 h-3" /> CLEAR
+              <X className="w-3 h-3" /> {t.clearLabel}
             </button>
           </div>
           <table className="w-full text-left text-xs font-mono-code">
             <tbody className="divide-y divide-[#1E232D]">
               {([
-                ['Name', (i: ModelPaperItem) => i.name],
-                ['Type', (i: ModelPaperItem) => i.type],
-                ['Author/Org', (i: ModelPaperItem) => i.author_org],
-                ['Released', (i: ModelPaperItem) => i.release_date],
-                ['Radar Score', (i: ModelPaperItem) => `${i.radar_score.toFixed(1)}`],
-                ['Breakthrough', (i: ModelPaperItem) => i.key_breakthrough],
-                ['Benchmarks/Stars', (i: ModelPaperItem) => i.benchmarks_or_stars]
+                [t.compareName, (i: ModelPaperItem) => i.name],
+                [t.compareType, (i: ModelPaperItem) => i.type],
+                [t.compareAuthorOrg, (i: ModelPaperItem) => i.author_org],
+                [t.compareReleased, (i: ModelPaperItem) => i.release_date],
+                [t.compareRadarScore, (i: ModelPaperItem) => `${i.radar_score.toFixed(1)}`],
+                [t.compareBreakthrough, (i: ModelPaperItem) => i.key_breakthrough],
+                [t.compareBenchmarks, (i: ModelPaperItem) => i.benchmarks_or_stars]
               ] as Array<[string, (i: ModelPaperItem) => string]>).map(([label, fn]) => (
                 <tr key={label} className="hover:bg-[#161A22] transition-colors">
                   <td className="p-2.5 text-[#6B7280] uppercase tracking-wider text-[10px]">{label}</td>
                   {compareItems.map((i) => (
-                    <td key={i.id} className={`p-2.5 text-[#D1D5DB] ${label === 'Radar Score' ? 'text-[#10B981] font-bold' : ''}`}>
+                    <td key={i.id} className={`p-2.5 text-[#D1D5DB] ${label === t.compareRadarScore ? 'text-[#10B981] font-bold' : ''}`}>
                       {fn(i)}
                     </td>
                   ))}
@@ -190,7 +190,7 @@ export const ModelsPapersView: React.FC<ModelsPapersViewProps> = ({
 
       {isLoading ? (
         <div className="p-12 text-center font-mono-code text-xs text-[#9CA3AF]">
-          Loading Database...
+          {t.loadingDatabase}
         </div>
       ) : (
         <div className="bg-[#12151B] border border-[#1E232D] rounded overflow-x-auto">
@@ -215,7 +215,7 @@ export const ModelsPapersView: React.FC<ModelsPapersViewProps> = ({
                       <button
                         onClick={() => toggleCompare(mp.id)}
                         disabled={!isCompared && compareIds.length >= 3}
-                        title="Compare"
+                        title={t.compareLabel}
                         className={`w-5 h-5 rounded border flex items-center justify-center text-[10px] flex-shrink-0 cursor-pointer transition-all ${
                           isCompared
                             ? 'bg-[#F59E0B] text-black border-[#F59E0B] font-bold'
@@ -249,7 +249,7 @@ export const ModelsPapersView: React.FC<ModelsPapersViewProps> = ({
                       rel="noreferrer"
                       className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#1E232D] hover:bg-[#06B6D4] text-white hover:text-black rounded transition-all"
                     >
-                      <span>Link</span>
+                      <span>{t.linkLabel}</span>
                       <ExternalLink className="w-3 h-3" />
                     </a>
                   </td>

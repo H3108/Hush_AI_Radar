@@ -40,9 +40,9 @@ export const EventClustersView: React.FC<EventClustersViewProps> = ({ clusters, 
       <div className="pt-3 border-t border-[#1E232D]">
         <div className="flex items-center gap-1.5 text-[10px] font-mono-code text-[#6B7280] uppercase tracking-wider mb-2">
           <MapPin className="w-3 h-3 text-[#3B82F6]" />
-          <span>时空演进 / Temporal Evolution</span>
+          <span>{t.temporalEvolution}</span>
           <span className="ml-auto text-[#9CA3AF] normal-case">
-            {members.length} signals · {formatSpan(span)}
+            {t.signalsCount.replace('{n}', String(members.length))} · {formatSpan(span)}
           </span>
         </div>
 
@@ -73,10 +73,10 @@ export const EventClustersView: React.FC<EventClustersViewProps> = ({ clusters, 
 
   const formatSpan = (ms: number) => {
     const hrs = ms / 3600000;
-    if (hrs < 24) return `${Math.max(1, Math.round(hrs))}h span`;
+    if (hrs < 24) return t.spanHours.replace('{n}', String(Math.max(1, Math.round(hrs))));
     const days = hrs / 24;
-    if (days < 30) return `${Math.round(days)}d span`;
-    return `${(days / 30).toFixed(1)}mo span`;
+    if (days < 30) return t.spanDays.replace('{n}', String(Math.round(days)));
+    return t.spanMonths.replace('{n}', (days / 30).toFixed(1));
   };
 
   return (
@@ -88,7 +88,7 @@ export const EventClustersView: React.FC<EventClustersViewProps> = ({ clusters, 
             <span>{t.heavyClustersTitle}</span>
           </h2>
           <p className="text-xs text-[#6B7280] font-mono-code mt-0.5">
-            Auto-clusters multi-source coverage of major AI breakthroughs into single intelligence topics.
+            {t.clustersDesc}
           </p>
         </div>
         <span className="px-2 py-1 text-xs font-mono-code bg-[#3B82F6]/10 text-[#3B82F6] border border-[#3B82F6]/30 rounded">
@@ -98,11 +98,11 @@ export const EventClustersView: React.FC<EventClustersViewProps> = ({ clusters, 
 
       {isLoading ? (
         <div className="p-12 text-center font-mono-code text-xs text-[#9CA3AF]">
-          Loading Event Clusters...
+          {t.loadingClusters}
         </div>
       ) : clusters.length === 0 ? (
         <div className="p-12 text-center font-mono-code text-xs text-[#6B7280] bg-[#12151B] border border-[#1E232D] rounded">
-          No clusters formed yet.
+          {t.noClustersYet}
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4">
@@ -149,8 +149,8 @@ export const EventClustersView: React.FC<EventClustersViewProps> = ({ clusters, 
                 </p>
 
                 <div className="flex items-center justify-between text-[11px] font-mono-code text-[#6B7280] pt-2 border-t border-[#1E232D]">
-                  <span>Grouped Sources: {cluster.related_signal_ids.length} Signals Consolidated</span>
-                  <span>Updated: {new Date(cluster.updated_at).toLocaleTimeString()}</span>
+                  <span>{t.clusterGroupedSources.replace('{n}', String(cluster.related_signal_ids.length))}</span>
+                  <span>{t.updatedLabel}: {new Date(cluster.updated_at).toLocaleTimeString()}</span>
                 </div>
 
                 {renderTimeline(cluster)}

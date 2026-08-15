@@ -91,10 +91,10 @@ export const InsightsView: React.FC<InsightsViewProps> = ({
 
   const periodTitle =
     currentTab === 'weekly'
-      ? 'WEEKLY INTELLIGENCE // AI 精华周报'
+      ? t.weeklyBriefPeriodTitle
       : currentTab === 'monthly'
-        ? 'MONTHLY REVIEW // AI 精华月报'
-        : (t.dailyBriefTitle || 'DAILY INTELLIGENCE // AI 精华日报');
+        ? t.monthlyBriefPeriodTitle
+        : t.dailyBriefPeriodTitle;
 
   return (
     <div className="flex-1 p-4 bg-[#0B0D10] space-y-4 overflow-y-auto max-h-[calc(100vh-140px)]">
@@ -106,7 +106,7 @@ export const InsightsView: React.FC<InsightsViewProps> = ({
             <span>{t.groupInsights || 'INSIGHTS 智能洞察报告中心'}</span>
           </h2>
           <p className="text-xs text-[#6B7280] font-mono-code mt-0.5">
-            Executive AI Intelligence Reports synthesized by the Gemini analysis engine.
+            {t.dailyBriefDesc}
           </p>
         </div>
 
@@ -197,10 +197,10 @@ export const InsightsView: React.FC<InsightsViewProps> = ({
         <div className="bg-[#12151B] border border-[#1E232D] rounded p-3 space-y-1.5">
           <div className="text-[10px] font-mono-code text-[#6B7280] uppercase tracking-wider flex items-center justify-between">
             <span>{t.briefHistory} — {currentTab.toUpperCase()}</span>
-            <span className="text-[#3B82F6]">{history.length} archived</span>
+            <span className="text-[#3B82F6]">{t.archivedCount.replace('{n}', String(history.length))}</span>
           </div>
           {historyLoading ? (
-            <div className="p-4 text-center font-mono-code text-xs text-[#9CA3AF]">Loading history...</div>
+            <div className="p-4 text-center font-mono-code text-xs text-[#9CA3AF]">{t.loadingHistory}</div>
           ) : history.length === 0 ? (
             <div className="p-4 text-center font-mono-code text-xs text-[#6B7280]">{t.noHistory}</div>
           ) : (
@@ -264,7 +264,7 @@ export const InsightsView: React.FC<InsightsViewProps> = ({
                         {item.summary}
                       </p>
                       <div className="flex items-center justify-between text-[10px] font-mono-code text-[#6B7280] pt-1">
-                        <span>Source: {item.source}</span>
+                        <span>{t.sourceLabel}: {item.source}</span>
                         <a href={item.url} target="_blank" rel="noreferrer" className="text-[#3B82F6] hover:underline">
                           {t.readOriginal} →
                         </a>
@@ -279,7 +279,7 @@ export const InsightsView: React.FC<InsightsViewProps> = ({
           {/* Raw Markdown */}
           <div className="space-y-2">
             <h3 className="text-sm font-bold font-mono-code border-b border-[#1E232D] pb-1.5 text-[#9CA3AF]">
-              MARKDOWN CONTENT
+              {t.markdownContent}
             </h3>
             <pre className="bg-[#0B0D10] border border-[#1E232D] rounded p-4 text-[11px] text-[#9CA3AF] font-mono-code whitespace-pre-wrap break-words overflow-x-auto">
               {displayBrief.markdown_content}

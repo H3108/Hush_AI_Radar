@@ -122,6 +122,152 @@ export interface Translations {
   // Monitor
   systemMonitorTitle: string;
   status: string;
+
+  // Header / Global Search
+  lastSyncFallback: string;
+  searchResultsSummary: string;
+  searchNoMatches: string;
+
+  // Signal Feed
+  filterAll: string;
+  hotThreshold: string;
+  criticalThreshold: string;
+  scoreLabel: string;
+  signalsCount: string;
+  clusterLinkLabel: string;
+  publishLabel: string;
+  relativeJustNow: string;
+  relativeMinutesAgo: string;
+  relativeHoursAgo: string;
+  relativeDaysAgo: string;
+
+  // Dashboard Visualizer
+  hotScoreBadge: string;
+  sourcesCount: string;
+  passRateBadge: string;
+  auditLabel: string;
+  scorePill: string;
+  todayExpressTitle: string;
+  dailyBriefHint: string;
+  agentSkillQuickFetch: string;
+  radarAnalyticsTitle: string;
+  visTabTrend: string;
+  visTabTags: string;
+  visTabSources: string;
+  sourcesIngestRatio: string;
+  topIngestedFeeds: string;
+
+  // Event Clusters
+  temporalEvolution: string;
+  spanHours: string;
+  spanDays: string;
+  spanMonths: string;
+  clustersDesc: string;
+  loadingClusters: string;
+  noClustersYet: string;
+  clusterGroupedSources: string;
+  updatedLabel: string;
+
+  // Daily Brief
+  dailyBriefDesc: string;
+  dailyBriefPeriodTitle: string;
+  weeklyBriefPeriodTitle: string;
+  monthlyBriefPeriodTitle: string;
+  archivedCount: string;
+  loadingHistory: string;
+  markdownContent: string;
+  sourceLabel: string;
+
+  // Models & Papers
+  modelsDbDesc: string;
+  filterAllLabel: string;
+  searchModelsPlaceholder: string;
+  sortScoreDesc: string;
+  sortScoreAsc: string;
+  sortDateDesc: string;
+  sortDateAsc: string;
+  sortNameAsc: string;
+  comparedCount: string;
+  quantComparisonTitle: string;
+  clearLabel: string;
+  compareLabel: string;
+  compareName: string;
+  compareType: string;
+  compareAuthorOrg: string;
+  compareReleased: string;
+  compareRadarScore: string;
+  compareBreakthrough: string;
+  compareBenchmarks: string;
+  loadingDatabase: string;
+  linkLabel: string;
+
+  // Review Queue
+  reviewQueueDesc: string;
+  loadingReviewQueue: string;
+  reviewReasonFallback: string;
+  originalLabel: string;
+  confidenceLabel: string;
+  heatScoreLabel: string;
+
+  // Connect
+  connectDesc: string;
+  rssFeedTitle: string;
+  rssFeedDesc: string;
+  endpointLabel: string;
+  copyFeedLink: string;
+  openRssXml: string;
+  readerWebMobile: string;
+  readerAppleEco: string;
+  readerAiDocHub: string;
+  openApiTitle: string;
+  openApiDesc: string;
+  noApiKey: string;
+  apiSignalsDesc: string;
+  queryParams: string;
+  paramDefault: string;
+  apiClustersDesc: string;
+  apiModelsDesc: string;
+  curlSignalsTitle: string;
+  curlClustersTitle: string;
+  copyLabel: string;
+  skillHubTitle: string;
+  skillHubDesc: string;
+  manifestOffline: string;
+  manifestLive: string;
+  savedLabel: string;
+  downloadSkillJson: string;
+  liveManifestEndpoints: string;
+  refreshLabel: string;
+  claudeSkillConfig: string;
+  cursorRules: string;
+  pythonIntegrationTitle: string;
+  openApiYamlTitle: string;
+  copySchema: string;
+
+  // System Monitor
+  autoPipelineActive: string;
+  statusActive: string;
+  statusDegraded: string;
+  statusFailing: string;
+  systemMonitorDesc: string;
+  syncingLabel: string;
+  pipelineDaemonMode: string;
+  bgScannerChecks: string;
+  feedsHealthyPct: string;
+  dbEngineTitle: string;
+  adminVerificationRequired: string;
+  storageDriverLabel: string;
+  aiModelLabel: string;
+  adminSyncRoute: string;
+  hiddenAdminSyncExample: string;
+  curatedSourcesTitle: string;
+  healthyPctLabel: string;
+  colSourceName: string;
+  colCategory: string;
+  colAuthorityWeight: string;
+  colSignalsIngested: string;
+  colLatency: string;
+  colStatus: string;
 }
 
 export const translations: Record<Language, Translations> = {
@@ -245,7 +391,153 @@ export const translations: Record<Language, Translations> = {
 
     // Monitor
     systemMonitorTitle: '系统与数据源巡检监控',
-    status: '运行状态'
+    status: '运行状态',
+
+    // Header / Global Search
+    lastSyncFallback: '自动 (15分钟)',
+    searchResultsSummary: '{n} 条结果，覆盖情报 / 事件簇 / 模型库 — ↑↓ 选择 · Enter 跳转',
+    searchNoMatches: '未找到匹配的情报、事件簇或模型。',
+
+    // Signal Feed
+    filterAll: '全部',
+    hotThreshold: '🔥 热 ≥80',
+    criticalThreshold: '⚡ 重度 ≥90',
+    scoreLabel: '得分',
+    signalsCount: '{n} 条情报',
+    clusterLinkLabel: '关联事件簇: {title}',
+    publishLabel: '发布',
+    relativeJustNow: '刚刚',
+    relativeMinutesAgo: '{n} 分钟前',
+    relativeHoursAgo: '{n} 小时前',
+    relativeDaysAgo: '{n} 天前',
+
+    // Dashboard Visualizer
+    hotScoreBadge: '得分 ≥80',
+    sourcesCount: '{n} 个数据源',
+    passRateBadge: '100% 通过',
+    auditLabel: '{model} 审计',
+    scorePill: '得分 {n}',
+    todayExpressTitle: '今日极速摘要',
+    dailyBriefHint: '点击查看 AI 生成的每日情报简报。',
+    agentSkillQuickFetch: 'Agent Skill 速取',
+    radarAnalyticsTitle: 'AI 情报雷达 · 数据分析中枢',
+    visTabTrend: '趋势',
+    visTabTags: '标签',
+    visTabSources: '数据源',
+    sourcesIngestRatio: '{n} 个数据源摄入占比',
+    topIngestedFeeds: '摄入量最高的数据源',
+
+    // Event Clusters
+    temporalEvolution: '时空演进',
+    spanHours: '{n} 小时',
+    spanDays: '{n} 天',
+    spanMonths: '{n} 个月',
+    clustersDesc: '自动聚合多源 AI 重大突破，形成单一情报主题。',
+    loadingClusters: '正在加载事件聚类...',
+    noClustersYet: '尚未形成事件聚类，等待下一次扫描聚合。',
+    clusterGroupedSources: '聚合来源: {n} 条情报合并',
+    updatedLabel: '更新于',
+
+    // Daily Brief
+    dailyBriefDesc: '由 Gemini 分析引擎合成的 AI 情报执行摘要。',
+    dailyBriefPeriodTitle: 'AI 精华日报',
+    weeklyBriefPeriodTitle: 'AI 精华周报',
+    monthlyBriefPeriodTitle: 'AI 精华月报',
+    archivedCount: '{n} 份归档',
+    loadingHistory: '正在加载历史简报...',
+    markdownContent: '原始 Markdown 内容',
+    sourceLabel: '来源',
+
+    // Models & Papers
+    modelsDbDesc: '精选的突破性 AI 模型、ArXiv 论文与开源基础设施知识库。',
+    filterAllLabel: '全部 ({n})',
+    searchModelsPlaceholder: '搜索名称、机构、突破点、基准...',
+    sortScoreDesc: '得分 ↓',
+    sortScoreAsc: '得分 ↑',
+    sortDateDesc: '日期 ↓',
+    sortDateAsc: '日期 ↑',
+    sortNameAsc: '名称 A-Z',
+    comparedCount: '{n}/3 已加入对比',
+    quantComparisonTitle: '⚖️ 量化对比 ({n})',
+    clearLabel: '清空',
+    compareLabel: '对比',
+    compareName: '名称',
+    compareType: '类型',
+    compareAuthorOrg: '作者 / 机构',
+    compareReleased: '发布时间',
+    compareRadarScore: '雷达得分',
+    compareBreakthrough: '核心突破',
+    compareBenchmarks: 'Benchmark / Stars',
+    loadingDatabase: '正在加载知识库...',
+    linkLabel: '链接',
+
+    // Review Queue
+    reviewQueueDesc: '置信度低于 65% 或疑似营销炒作的情报，在发布前会进入此处人工复审。',
+    loadingReviewQueue: '正在加载复审队列...',
+    reviewReasonFallback: 'Agent 置信度低于质量阈值。',
+    originalLabel: '原文',
+    confidenceLabel: '置信度',
+    heatScoreLabel: '热度',
+
+    // Connect
+    connectDesc: '开放 API、RSS 订阅与 AI Agent Skill 接入接口。',
+    rssFeedTitle: 'RSS 2.0 订阅源',
+    rssFeedDesc: '面向 RSS 阅读器与自动化守护进程的标准 XML 格式',
+    endpointLabel: '接口地址',
+    copyFeedLink: '复制订阅链接',
+    openRssXml: '打开 RSS XML',
+    readerWebMobile: 'Web / 移动端',
+    readerAppleEco: 'Apple 生态',
+    readerAiDocHub: 'AI 文档中心',
+    openApiTitle: 'Hush AI Radar 开放 API (v1)',
+    openApiDesc: '面向 AI Agent 与自定义面板的公共 JSON 接口',
+    noApiKey: '无需 API Key',
+    apiSignalsDesc: '最新 AI 情报信号',
+    queryParams: '查询参数',
+    paramDefault: '(默认 20)',
+    apiClustersDesc: '活跃的事件聚类主题',
+    apiModelsDesc: '精选模型与 ArXiv 论文条目',
+    curlSignalsTitle: 'cURL 情报请求',
+    curlClustersTitle: 'cURL 聚类请求',
+    copyLabel: '复制',
+    skillHubTitle: 'Agent Skill 与接入中心',
+    skillHubDesc: '连接 Claude Code、Cursor、自定义 GPT 与 LangChain Agent',
+    manifestOffline: '清单离线',
+    manifestLive: '清单 v{n} 在线',
+    savedLabel: '已保存!',
+    downloadSkillJson: '下载 Skill JSON',
+    liveManifestEndpoints: '实时清单接口 (GET /api/agent/skill)',
+    refreshLabel: '刷新',
+    claudeSkillConfig: 'Claude Code Skill 配置',
+    cursorRules: 'Cursor 规则 (.cursor/rules)',
+    pythonIntegrationTitle: 'Python LangChain / AutoGPT 集成',
+    openApiYamlTitle: 'OpenAPI 3.1 YAML 规范',
+    copySchema: '复制规范',
+
+    // System Monitor
+    autoPipelineActive: '自动管道运行中 (15分钟间隔)',
+    statusActive: '正常',
+    statusDegraded: '降级',
+    statusFailing: '故障',
+    systemMonitorDesc: '管道自动化、{model} 推理与 SQLite 存储的实时状态。',
+    syncingLabel: '同步中...',
+    pipelineDaemonMode: '管道引擎以守护模式运行',
+    bgScannerChecks: '后台扫描器定期检查 RSS 数据源',
+    feedsHealthyPct: '{n}% 精选数据源当前健康',
+    dbEngineTitle: '数据库引擎与管理同步接口',
+    adminVerificationRequired: '需要管理员验证',
+    storageDriverLabel: '存储驱动',
+    aiModelLabel: 'AI 模型',
+    adminSyncRoute: '管理同步路由',
+    hiddenAdminSyncExample: '🔒 隐藏管理同步触发示例:',
+    curatedSourcesTitle: '精选情报数据源 ({n} 个顶级来源)',
+    healthyPctLabel: '{n}% 健康',
+    colSourceName: '数据源名称',
+    colCategory: '分类',
+    colAuthorityWeight: '权威权重',
+    colSignalsIngested: '已摄入情报',
+    colLatency: '延迟',
+    colStatus: '状态'
   },
   en: {
     // Header
@@ -368,7 +660,153 @@ export const translations: Record<Language, Translations> = {
 
     // Monitor
     systemMonitorTitle: 'System & Source Health Monitor',
-    status: 'Status'
+    status: 'Status',
+
+    // Header / Global Search
+    lastSyncFallback: 'Auto (15m)',
+    searchResultsSummary: '{n} results across Signals / Clusters / Models — ↑↓ navigate · Enter open',
+    searchNoMatches: 'No matches across signals, clusters, or models.',
+
+    // Signal Feed
+    filterAll: 'All',
+    hotThreshold: '🔥 Hot ≥80',
+    criticalThreshold: '⚡ Critical ≥90',
+    scoreLabel: 'SCORE',
+    signalsCount: '{n} signals',
+    clusterLinkLabel: 'Cluster: {title}',
+    publishLabel: 'Published',
+    relativeJustNow: 'just now',
+    relativeMinutesAgo: '{n}m ago',
+    relativeHoursAgo: '{n}h ago',
+    relativeDaysAgo: '{n}d ago',
+
+    // Dashboard Visualizer
+    hotScoreBadge: 'Score ≥80',
+    sourcesCount: '{n} Sources',
+    passRateBadge: '100% Pass',
+    auditLabel: '{model} Audit',
+    scorePill: 'Score {n}',
+    todayExpressTitle: 'Today\'s Express',
+    dailyBriefHint: 'Click to open the AI-generated daily intelligence briefing.',
+    agentSkillQuickFetch: 'Agent Skill Quick Fetch',
+    radarAnalyticsTitle: 'AI INTELLIGENCE RADAR ANALYTICS',
+    visTabTrend: 'Trend',
+    visTabTags: 'Tags',
+    visTabSources: 'Sources',
+    sourcesIngestRatio: '{n} Sources Ingest Ratio',
+    topIngestedFeeds: 'Top Ingested Feeds',
+
+    // Event Clusters
+    temporalEvolution: 'Temporal Evolution',
+    spanHours: '{n}h span',
+    spanDays: '{n}d span',
+    spanMonths: '{n}mo span',
+    clustersDesc: 'Auto-clusters multi-source coverage of major AI breakthroughs into single intelligence topics.',
+    loadingClusters: 'Loading Event Clusters...',
+    noClustersYet: 'No clusters formed yet.',
+    clusterGroupedSources: 'Grouped Sources: {n} Signals Consolidated',
+    updatedLabel: 'Updated',
+
+    // Daily Brief
+    dailyBriefDesc: 'Executive AI Intelligence Reports synthesized by the Gemini analysis engine.',
+    dailyBriefPeriodTitle: 'DAILY INTELLIGENCE // AI DAILY BRIEF',
+    weeklyBriefPeriodTitle: 'WEEKLY INTELLIGENCE // AI WEEKLY BRIEF',
+    monthlyBriefPeriodTitle: 'MONTHLY REVIEW // AI MONTHLY BRIEF',
+    archivedCount: '{n} archived',
+    loadingHistory: 'Loading history...',
+    markdownContent: 'MARKDOWN CONTENT',
+    sourceLabel: 'Source',
+
+    // Models & Papers
+    modelsDbDesc: 'Curated repository of breakthrough AI models, ArXiv papers, and open-source infrastructure.',
+    filterAllLabel: 'ALL ({n})',
+    searchModelsPlaceholder: 'Search name, org, breakthrough, benchmark...',
+    sortScoreDesc: 'Score ↓',
+    sortScoreAsc: 'Score ↑',
+    sortDateDesc: 'Date ↓',
+    sortDateAsc: 'Date ↑',
+    sortNameAsc: 'Name A-Z',
+    comparedCount: '{n}/3 compared',
+    quantComparisonTitle: '⚖️ QUANT COMPARISON ({n})',
+    clearLabel: 'CLEAR',
+    compareLabel: 'Compare',
+    compareName: 'Name',
+    compareType: 'Type',
+    compareAuthorOrg: 'Author/Org',
+    compareReleased: 'Released',
+    compareRadarScore: 'Radar Score',
+    compareBreakthrough: 'Breakthrough',
+    compareBenchmarks: 'Benchmarks/Stars',
+    loadingDatabase: 'Loading Database...',
+    linkLabel: 'Link',
+
+    // Review Queue
+    reviewQueueDesc: 'Signals with Confidence Score < 65% or marketing hype are routed here for review before publishing.',
+    loadingReviewQueue: 'Loading Review Queue...',
+    reviewReasonFallback: 'Agent Confidence score below quality threshold.',
+    originalLabel: 'Original',
+    confidenceLabel: 'Confidence',
+    heatScoreLabel: 'Heat Score',
+
+    // Connect
+    connectDesc: 'External API, RSS Feed Subscription, and AI Agent Skill Interfaces.',
+    rssFeedTitle: 'RSS 2.0 Feed Subscription',
+    rssFeedDesc: 'Standard RSS XML for Feed Readers & Automation Daemons',
+    endpointLabel: 'Endpoint:',
+    copyFeedLink: 'Copy Feed Link',
+    openRssXml: 'Open RSS XML',
+    readerWebMobile: 'Web / Mobile',
+    readerAppleEco: 'Apple Ecosystem',
+    readerAiDocHub: 'AI Document Hub',
+    openApiTitle: 'Hush AI Radar Open API (v1)',
+    openApiDesc: 'Public JSON Endpoints for AI Agents & Custom Dashboard Widgets',
+    noApiKey: 'NO API KEY REQUIRED',
+    apiSignalsDesc: 'Latest AI intelligence signals',
+    queryParams: 'Query parameters:',
+    paramDefault: '(default 20)',
+    apiClustersDesc: 'Active grouped event clusters',
+    apiModelsDesc: 'Curated model & ArXiv database entries',
+    curlSignalsTitle: 'cURL Signals Request',
+    curlClustersTitle: 'cURL Clusters Request',
+    copyLabel: 'Copy',
+    skillHubTitle: 'Agent Skill & Integration Hub',
+    skillHubDesc: 'Connect Claude Code, Cursor, Custom GPTs, and LangChain Agents',
+    manifestOffline: 'MANIFEST OFFLINE',
+    manifestLive: 'MANIFEST v{n} LIVE',
+    savedLabel: 'Saved!',
+    downloadSkillJson: 'Download Skill JSON',
+    liveManifestEndpoints: 'Live Manifest Endpoints (GET /api/agent/skill)',
+    refreshLabel: 'Refresh',
+    claudeSkillConfig: 'Claude Code Skill Config',
+    cursorRules: 'Cursor Rules (.cursor/rules)',
+    pythonIntegrationTitle: 'Python LangChain / AutoGPT Integration',
+    openApiYamlTitle: 'OpenAPI 3.1 YAML Schema',
+    copySchema: 'Copy Schema',
+
+    // System Monitor
+    autoPipelineActive: 'Auto Pipeline Active (15m Interval)',
+    statusActive: 'ACTIVE',
+    statusDegraded: 'DEGRADED',
+    statusFailing: 'FAILING',
+    systemMonitorDesc: 'Real-time status of pipeline automation, {model} inference, and SQLite storage.',
+    syncingLabel: 'SYNCING...',
+    pipelineDaemonMode: 'Pipeline engine running in daemon mode',
+    bgScannerChecks: 'Background scanner checks RSS feeds',
+    feedsHealthyPct: '{n}% curated feeds currently healthy',
+    dbEngineTitle: 'DATABASE ENGINE & ADMIN SYNC ENDPOINT',
+    adminVerificationRequired: 'ADMIN VERIFICATION REQUIRED',
+    storageDriverLabel: 'Storage Driver:',
+    aiModelLabel: 'AI Model:',
+    adminSyncRoute: 'Admin Sync Route:',
+    hiddenAdminSyncExample: '🔒 Hidden Admin Sync Triggering Example:',
+    curatedSourcesTitle: 'CURATED INTELLIGENCE SOURCES ({n} TOP-TIER SOURCES)',
+    healthyPctLabel: '{n}% HEALTHY',
+    colSourceName: 'SOURCE NAME',
+    colCategory: 'CATEGORY',
+    colAuthorityWeight: 'AUTHORITY WEIGHT',
+    colSignalsIngested: 'SIGNALS INGESTED',
+    colLatency: 'LATENCY',
+    colStatus: 'STATUS'
   }
 };
 
