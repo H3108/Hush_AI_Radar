@@ -8,6 +8,7 @@ const EMBEDDING_MODEL = process.env.GEMINI_EMBEDDING_MODEL || 'gemini-embedding-
 const MAX_RETRIES = 4;
 const INITIAL_BACKOFF_MS = 800;
 const MAX_BACKOFF_MS = 8000;
+const GEMINI_REQUEST_TIMEOUT_MS = 90_000;
 
 let genAIClient: GoogleGenAI | null = null;
 
@@ -41,11 +42,37 @@ function isRetryableError(err: any): boolean {
   if (msg.includes('429') || msg.includes('503') || msg.includes('500')) return true;
   if (msg.includes('rate limit') || msg.includes('overload') || msg.includes('currently experiencing high demand')) return true;
   if (msg.includes('temporary') || msg.includes('try again')) return true;
+  if (err?.name === 'AbortError' || msg.includes('timed out')) return true;
   return false;
 }
 
 async function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
+ * Runs a Gemini call with a hard per-attempt timeout so a hung upstream request
+ * cannot stall the pipeline forever. On timeout it rejects with an AbortError,
+ * which withRetry treats as transient and retries with backoff.
+ */
+async function withTimeout<T>(operation: () => Promise<T>, timeoutMs: number, context: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      const err: any = new Error(`Gemini request "${context}" timed out after ${timeoutMs}ms.`);
+      err.name = 'AbortError';
+      reject(err);
+    }, timeoutMs);
+    operation().then(
+      (v) => {
+        clearTimeout(timer);
+        resolve(v);
+      },
+      (e) => {
+        clearTimeout(timer);
+        reject(e);
+      }
+    );
+  });
 }
 
 /**
@@ -59,7 +86,7 @@ async function withRetry<T>(
   attempt = 1
 ): Promise<T> {
   try {
-    const result = await operation();
+    const result = await withTimeout(operation, GEMINI_REQUEST_TIMEOUT_MS, context);
     const usage = recordUsage(result);
     if (usage.inputTokens !== undefined || usage.outputTokens !== undefined) {
       try {

@@ -34,17 +34,41 @@ const rssParser = new Parser({
  * hosts reachable via HTTP_PROXY are no longer dropped.
  */
 async function fetchRssFeed(feedUrl: string): Promise<Parser.Output<any>> {
-  const res = await fetch(feedUrl, {
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      'Accept': 'application/rss+xml, application/atom+xml, application/xml;q=0.9, */*;q=0.8'
-    },
-    signal: AbortSignal.timeout(8000)
-  });
-  if (!res.ok) {
-    throw new Error(`Status code ${res.status}`);
+  const MAX_ATTEMPTS = 3;
+  let lastErr: any;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      const res = await fetch(feedUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'application/rss+xml, application/atom+xml, application/xml;q=0.9, */*;q=0.8'
+        },
+        signal: AbortSignal.timeout(6000)
+      });
+      if (res.status === 502 || res.status === 503 || res.status === 429 || res.status >= 500) {
+        lastErr = new Error(`Status code ${res.status}`);
+        if (attempt < MAX_ATTEMPTS) {
+          await new Promise((r) => setTimeout(r, 800 * attempt));
+          continue;
+        }
+        break;
+      }
+      if (!res.ok) {
+        lastErr = new Error(`Status code ${res.status}`);
+        break;
+      }
+      return rssParser.parseString(await res.text());
+    } catch (err: any) {
+      const isTransient = err?.name === 'AbortError' || /fetch failed/i.test(err?.message || '');
+      lastErr = err;
+      if (isTransient && attempt < MAX_ATTEMPTS) {
+        await new Promise((r) => setTimeout(r, 800 * attempt));
+        continue;
+      }
+      throw err;
+    }
   }
-  return rssParser.parseString(await res.text());
+  throw lastErr;
 }
 
 export interface PipelineLogEntry {

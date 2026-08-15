@@ -5,19 +5,14 @@ export interface Translations {
   brandName: string;
   brandTagline: string;
   searchPlaceholder: string;
-  scanRadar: string;
-  radarScanning: string;
   sourcesHealthy: string;
   live: string;
 
   // Sidebar Groups
   groupRadar: string;
   groupInsights: string;
-  groupReports: string;
   groupKnowledge: string;
   groupConnect: string;
-  groupModels: string;
-  groupAgents: string;
   groupSystem: string;
 
   // Sidebar Sub-items
@@ -27,12 +22,10 @@ export interface Translations {
   navDailyBrief: string;
   navWeeklyBrief: string;
   navMonthlyBrief: string;
-  navModelsPapers: string;
   navModels: string;
   navPapers: string;
   navRssFeed: string;
   navOpenApi: string;
-  navReviewQueue: string;
   navAgentSkill: string;
   navSystemMonitor: string;
   navAdminConsole: string;
@@ -45,11 +38,9 @@ export interface Translations {
   signals24h: string;
   hotEvents: string;
   modelUpdates: string;
-  reviewQueue: string;
   actionNeeded: string;
   agentConfidence: string;
   eventClusters: string;
-  sourceHealth: string;
   active: string;
   aiTrendPulse: string;
 
@@ -63,8 +54,6 @@ export interface Translations {
   trendChangesTitle: string;
   hotTagsTitle: string;
   sourceRankingTitle: string;
-  allTime: string;
-  highImpact: string;
   filterByTag: string;
   sourceWeight: string;
 
@@ -93,33 +82,23 @@ export interface Translations {
 
   // Clusters
   heavyClustersTitle: string;
-  heavyClustersDesc: string;
   activeTopics: string;
   impact: string;
   clusterHeat: string;
-  groupedSignals: string;
-  updatedAt: string;
 
   // Daily Brief
   dailyBriefTitle: string;
-  dailyBriefDesc: string;
-  reSynthesize: string;
-  synthesizing: string;
   copyMd: string;
   copied: string;
   exportMd: string;
   executiveSummary: string;
   readOriginal: string;
-  switchBriefLang: string;
-  generateBrief: string;
   generatingBrief: string;
   regenerateBrief: string;
   periodicEmptyHint: string;
 
   // Models & Papers
   modelsDbTitle: string;
-  modelsDbDesc: string;
-  entriesArchived: string;
   nameAndType: string;
   authorOrg: string;
   keyBreakthrough: string;
@@ -129,7 +108,6 @@ export interface Translations {
 
   // Review Queue
   reviewQueueTitle: string;
-  reviewQueueDesc: string;
   pendingReview: string;
   reviewQueueEmpty: string;
   reviewQueueEmptyDesc: string;
@@ -139,22 +117,10 @@ export interface Translations {
   approveAndPublish: string;
 
   // Agent Skill
-  agentSkillTitle: string;
-  agentSkillDesc: string;
   pythonSnippet: string;
-  curlCommand: string;
-  openApiSpec: string;
-  copyCode: string;
 
   // Monitor
   systemMonitorTitle: string;
-  systemMonitorDesc: string;
-  dbInfrastructure: string;
-  storageDriver: string;
-  aiModel: string;
-  lastSyncRun: string;
-  authorityWeight: string;
-  signalsIngested: string;
   status: string;
 }
 
@@ -164,19 +130,14 @@ export const translations: Record<Language, Translations> = {
     brandName: 'HUSH AI RADAR',
     brandTagline: '深度情报 · 零噪音 · 实时 AI 雷达',
     searchPlaceholder: 'Cmd + K / 搜索情报, DeepSeek, 模型...',
-    scanRadar: '扫描雷达',
-    radarScanning: '雷达扫描中...',
     sourcesHealthy: '健康源',
     live: '实时运转',
 
     // Sidebar Groups
     groupRadar: 'RADAR 情报雷达',
     groupInsights: 'INSIGHTS 智能洞察',
-    groupReports: 'REPORTS 研报与日报',
     groupKnowledge: 'KNOWLEDGE AI知识库',
     groupConnect: 'CONNECT 开放连接',
-    groupModels: 'MODELS 模型与论文',
-    groupAgents: 'AGENTS Agent 接口',
     groupSystem: 'SYSTEM 系统监控',
 
     // Sidebar Sub-items
@@ -186,12 +147,10 @@ export const translations: Record<Language, Translations> = {
     navDailyBrief: 'AI 精华日报',
     navWeeklyBrief: 'AI 精华周报',
     navMonthlyBrief: 'AI 精华月报',
-    navModelsPapers: '模型与论文库',
     navModels: '模型库',
     navPapers: '论文库',
     navRssFeed: 'RSS 订阅',
     navOpenApi: '开放 API',
-    navReviewQueue: 'Agent 审核队列',
     navAgentSkill: 'Agent Skill 适配',
     navSystemMonitor: '系统运行监控',
     navAdminConsole: 'Admin Console',
@@ -204,11 +163,9 @@ export const translations: Record<Language, Translations> = {
     signals24h: '24H 新增情报',
     hotEvents: '热点事件 (≥80分)',
     modelUpdates: '模型与论文更新',
-    reviewQueue: '待审核队列',
     actionNeeded: '需处理',
     agentConfidence: 'Agent 置信度',
     eventClusters: '事件聚类主题',
-    sourceHealth: '数据源健康度',
     active: '正常活跃',
     aiTrendPulse: 'AI 趋势 PULSE 监测',
 
@@ -222,8 +179,6 @@ export const translations: Record<Language, Translations> = {
     trendChangesTitle: 'AI 趋势变化与分类热度分布',
     hotTagsTitle: '热门标签频次与雷达云图',
     sourceRankingTitle: '18 顶级数据源贡献与权威排行',
-    allTime: '全量统计',
-    highImpact: '高影响力',
     filterByTag: '按此标签过滤',
     sourceWeight: '权威权重',
 
@@ -252,32 +207,22 @@ export const translations: Record<Language, Translations> = {
 
     // Clusters
     heavyClustersTitle: '多源重磅事件聚类图谱',
-    heavyClustersDesc: '自动将多家媒体与学术报道的同一突破事件合并为单一情报主题。',
     activeTopics: '个活跃主题',
     impact: '影响等级',
     clusterHeat: '聚类热度',
-    groupedSignals: '归并报道源',
-    updatedAt: '更新于',
 
     // Daily Brief
     dailyBriefTitle: 'AI 精华日报',
-    dailyBriefDesc: '由 gemini-3.1-flash-lite 从当日高热度情报自动归纳合成。',
-    reSynthesize: '重新合成日报',
-    synthesizing: 'Gemini 合成中...',
     copyMd: '复制 Markdown',
     copied: '已复制!',
     exportMd: '导出文件',
     executiveSummary: '今日核心导读',
     readOriginal: '阅读原文',
-    generateBrief: '生成简报',
     generatingBrief: 'AI 生成中...',
     regenerateBrief: '重新生成',
     periodicEmptyHint: '该周期简报尚未生成，点击「重新生成」或等待定时任务（周报：每周日 23:55 UTC / 月报：每月 1 日 23:55 UTC）自动生成。',
-    switchBriefLang: '切换日报语言',
     // Models & Papers
     modelsDbTitle: '模型与重磅论文知识库',
-    modelsDbDesc: '收录全球顶尖 LLM、开源权重、ArXiv 突破论文与框架数据。',
-    entriesArchived: '条记录已归档',
     nameAndType: '名称与类型',
     authorOrg: '作者 / 机构',
     keyBreakthrough: '核心突破点',
@@ -287,7 +232,6 @@ export const translations: Record<Language, Translations> = {
 
     // Review Queue
     reviewQueueTitle: 'Agent 质量复审队列',
-    reviewQueueDesc: '置信度 < 65% 或含有营销炒作嫌疑的情报将进入队列，供人工审验后再发布。',
     pendingReview: '条待复审',
     reviewQueueEmpty: '复审队列已清空',
     reviewQueueEmptyDesc: '所有已采集情报均符合 Agent 质量标准 (置信度 ≥65%)。',
@@ -297,22 +241,10 @@ export const translations: Record<Language, Translations> = {
     approveAndPublish: '审核通过并发布',
 
     // Agent Skill
-    agentSkillTitle: 'AI Agent 接口与 Skill 中心',
-    agentSkillDesc: '无缝接入 Claude Code, Cursor, Custom GPTs 或 AutoGPT。',
     pythonSnippet: 'PYTHON SDK 调用示例',
-    curlCommand: 'cURL 终端指令',
-    openApiSpec: 'OPENAPI 3.1 规范 (YAML)',
-    copyCode: '复制代码',
 
     // Monitor
     systemMonitorTitle: '系统与数据源巡检监控',
-    systemMonitorDesc: '实时监控 Agent 流水线、gemini-3.1-flash-lite 推理与 SQLite 存储状态。',
-    dbInfrastructure: '数据库架构与引擎指标',
-    storageDriver: '存储驱动',
-    aiModel: 'AI 模型',
-    lastSyncRun: '最近同步运行',
-    authorityWeight: '权威权重',
-    signalsIngested: '已入库信号数',
     status: '运行状态'
   },
   en: {
@@ -320,19 +252,14 @@ export const translations: Record<Language, Translations> = {
     brandName: 'HUSH AI RADAR',
     brandTagline: 'Deep Intelligence. Zero Noise. Real-time AI Radar.',
     searchPlaceholder: 'Cmd + K / Search Signals, DeepSeek, Models...',
-    scanRadar: 'Scan Radar',
-    radarScanning: 'Scanning...',
     sourcesHealthy: 'Healthy Sources',
     live: 'LIVE',
 
     // Sidebar Groups
     groupRadar: 'RADAR',
     groupInsights: 'INSIGHTS',
-    groupReports: 'REPORTS',
     groupKnowledge: 'KNOWLEDGE',
     groupConnect: 'CONNECT',
-    groupModels: 'MODELS & PAPERS',
-    groupAgents: 'AGENTS',
     groupSystem: 'SYSTEM & MONITORING',
 
     // Sidebar Sub-items
@@ -342,12 +269,10 @@ export const translations: Record<Language, Translations> = {
     navDailyBrief: 'Daily Brief',
     navWeeklyBrief: 'Weekly Intelligence',
     navMonthlyBrief: 'Monthly Review',
-    navModelsPapers: 'Models & Papers',
     navModels: 'Model Hub',
     navPapers: 'Paper Library',
     navRssFeed: 'RSS Feed',
     navOpenApi: 'Open API',
-    navReviewQueue: 'Review Queue',
     navAgentSkill: 'Agent Skill',
     navSystemMonitor: 'System Monitor',
     navAdminConsole: 'Admin Console',
@@ -360,11 +285,9 @@ export const translations: Record<Language, Translations> = {
     signals24h: '24h New Signals',
     hotEvents: 'Hot Events (Score ≥80)',
     modelUpdates: 'Models & Papers Added',
-    reviewQueue: 'Review Queue',
     actionNeeded: 'Action Needed',
     agentConfidence: 'Agent Confidence',
     eventClusters: 'Event Clusters',
-    sourceHealth: 'Source Health',
     active: 'Active',
     aiTrendPulse: 'AI TREND PULSE MONITOR',
 
@@ -378,8 +301,6 @@ export const translations: Record<Language, Translations> = {
     trendChangesTitle: 'AI Trend Activity & Category Distribution',
     hotTagsTitle: 'Hot Tags Frequency & Radar Cloud',
     sourceRankingTitle: '18 Source Contribution & Authority Ranking',
-    allTime: 'All Time',
-    highImpact: 'High Impact',
     filterByTag: 'Filter by Tag',
     sourceWeight: 'Auth Weight',
 
@@ -408,33 +329,23 @@ export const translations: Record<Language, Translations> = {
 
     // Clusters
     heavyClustersTitle: 'Multi-Source Heavy Event Clusters',
-    heavyClustersDesc: 'Consolidates multi-source coverage of major AI breakthroughs into unified intelligence topics.',
     activeTopics: 'Active Topics',
     impact: 'Impact',
     clusterHeat: 'Cluster Heat',
-    groupedSignals: 'Grouped Signals',
-    updatedAt: 'Updated at',
 
     // Daily Brief
     dailyBriefTitle: 'AI Daily Intelligence Brief',
-    dailyBriefDesc: 'Auto-synthesized by gemini-3.1-flash-lite from top daily signals.',
-    reSynthesize: 'Re-Synthesize Brief',
-    synthesizing: 'Gemini Synthesizing...',
     copyMd: 'Copy MD',
     copied: 'Copied!',
     exportMd: 'Export MD',
     executiveSummary: 'Executive Summary',
     readOriginal: 'Read Original',
-    generateBrief: 'Generate Brief',
     generatingBrief: 'Generating...',
     regenerateBrief: 'Regenerate',
     periodicEmptyHint: 'This periodic brief has not been generated yet. Click "Regenerate" or wait for the scheduled task (Weekly: Sun 23:55 UTC / Monthly: 1st 23:55 UTC).',
-    switchBriefLang: 'Brief Language',
 
     // Models & Papers
     modelsDbTitle: 'Models & Papers Registry',
-    modelsDbDesc: 'Curated registry of breakthrough LLMs, ArXiv papers, and open-source frameworks.',
-    entriesArchived: 'Entries Archived',
     nameAndType: 'Name & Type',
     authorOrg: 'Author / Org',
     keyBreakthrough: 'Key Breakthrough',
@@ -444,7 +355,6 @@ export const translations: Record<Language, Translations> = {
 
     // Review Queue
     reviewQueueTitle: 'Agent Quality Control & Review Queue',
-    reviewQueueDesc: 'Signals with Confidence Score < 65% or marketing claims are routed here for review.',
     pendingReview: 'Pending Review',
     reviewQueueEmpty: 'Review Queue Empty',
     reviewQueueEmptyDesc: 'All ingested signals meet Agent Quality Control standards (≥65% Confidence).',
@@ -454,22 +364,10 @@ export const translations: Record<Language, Translations> = {
     approveAndPublish: 'Approve & Publish',
 
     // Agent Skill
-    agentSkillTitle: 'Agent Skill & OpenAPI Hub',
-    agentSkillDesc: 'Connect Claude Code, Cursor, AutoGPT, or Custom GPTs directly.',
     pythonSnippet: 'PYTHON SDK CODE SNIPPET',
-    curlCommand: 'cURL TERMINAL COMMAND',
-    openApiSpec: 'OPENAPI 3.1 SPECIFICATION (YAML)',
-    copyCode: 'Copy Code',
 
     // Monitor
     systemMonitorTitle: 'System & Source Health Monitor',
-    systemMonitorDesc: 'Real-time status of pipeline automation, gemini-3.1-flash-lite inference, and SQLite storage.',
-    dbInfrastructure: 'Database & Infrastructure Metrics',
-    storageDriver: 'Storage Driver',
-    aiModel: 'AI Model',
-    lastSyncRun: 'Last Sync Run',
-    authorityWeight: 'Authority Weight',
-    signalsIngested: 'Signals Ingested',
     status: 'Status'
   }
 };
