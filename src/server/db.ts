@@ -880,11 +880,21 @@ export async function listDailyBriefs(lang?: string, type: 'daily' | 'weekly' | 
   params.push(limit);
 
   const res = database.exec(sql, params);
-  if (!res || res.length === 0) return [];
+  // Fallback to any brief of this type if the requested language has no archive
+  // (mirrors getLatestDailyBrief: the daily content already falls back cross-language)
+  let fallbackRes = null;
+  if ((!res || res.length === 0) && lang) {
+    fallbackRes = database.exec(
+      'SELECT id, date, language, brief_type, headline, generated_at FROM daily_briefs WHERE brief_type = ? ORDER BY date DESC, generated_at DESC LIMIT ?',
+      [type, limit]
+    );
+  }
+  const result = fallbackRes && fallbackRes.length > 0 ? fallbackRes : res;
+  if (!result || result.length === 0) return [];
 
-  return res[0].values.map((row) => {
+  return result[0].values.map((row) => {
     const obj: any = {};
-    res[0].columns.forEach((col, idx) => { obj[col] = row[idx]; });
+    result[0].columns.forEach((col, idx) => { obj[col] = row[idx]; });
     return {
       id: obj.id,
       date: obj.date,
