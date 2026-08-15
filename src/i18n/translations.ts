@@ -105,6 +105,7 @@ export interface Translations {
   authorOrg: string;
   keyBreakthrough: string;
   benchmarksStars: string;
+  benchmarksPlaceholder: string;
   score: string;
   action: string;
 
@@ -489,6 +490,7 @@ export const translations: Record<Language, Translations> = {
     authorOrg: '作者 / 机构',
     keyBreakthrough: '核心突破点',
     benchmarksStars: 'Benchmark / Stars',
+    benchmarksPlaceholder: '—',
     score: '得分',
     action: '操作',
 
@@ -872,6 +874,7 @@ export const translations: Record<Language, Translations> = {
     authorOrg: 'Author / Org',
     keyBreakthrough: 'Key Breakthrough',
     benchmarksStars: 'Benchmarks / Stars',
+    benchmarksPlaceholder: '—',
     score: 'Score',
     action: 'Action',
 

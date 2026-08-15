@@ -203,6 +203,12 @@ function initSchema(database: Database) {
   database.run(`UPDATE sources SET rss_url = 'https://www.v2ex.com/index.xml' WHERE id = 'v2ex-ai'`);
   // Migration: hf-daily-papers duplicated arxiv-cs-cl (both cs.CL); point at cs.LG for distinct ML coverage.
   database.run(`UPDATE sources SET rss_url = 'https://rss.arxiv.org/rss/cs.LG' WHERE id = 'hf-daily-papers'`);
+  // Migration: media/news articles were auto-curated into the model/paper registry
+  // with a misleading "model" type; they are not knowledge assets and belong in the
+  // signal stream, not the registry. Also strip the duplicated "Score X" strings that
+  // were written into the benchmark column (the score has its own dedicated column).
+  database.run(`DELETE FROM models_papers WHERE category = 'media' AND id LIKE 'mp-%'`);
+  database.run(`UPDATE models_papers SET benchmarks_or_stars = '' WHERE benchmarks_or_stars LIKE 'Score %'`);
 }
 
 /**

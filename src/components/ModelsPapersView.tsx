@@ -61,6 +61,11 @@ export const ModelsPapersView: React.FC<ModelsPapersViewProps> = ({
     ? items.filter((i) => compareIds.includes(i.id))
     : compareIds.map((id) => items.find((i) => i.id === id)).filter((i): i is ModelPaperItem => !!i);
 
+  const benchText = (mp: ModelPaperItem): string => {
+    const raw = (mp.benchmarks_or_stars || '').trim();
+    return /^score\s*\d/i.test(raw) ? '' : raw;
+  };
+
   return (
     <div className="flex-1 p-4 bg-[#0B0D10] space-y-4 overflow-y-auto max-h-[calc(100vh-140px)]">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-[#1E232D] pb-3 gap-3">
@@ -172,7 +177,7 @@ export const ModelsPapersView: React.FC<ModelsPapersViewProps> = ({
                 [t.compareReleased, (i: ModelPaperItem) => i.release_date],
                 [t.compareRadarScore, (i: ModelPaperItem) => `${i.radar_score.toFixed(1)}`],
                 [t.compareBreakthrough, (i: ModelPaperItem) => i.key_breakthrough],
-                [t.compareBenchmarks, (i: ModelPaperItem) => i.benchmarks_or_stars]
+                [t.compareBenchmarks, (i: ModelPaperItem) => benchText(i) || t.benchmarksPlaceholder]
               ] as Array<[string, (i: ModelPaperItem) => string]>).map(([label, fn]) => (
                 <tr key={label} className="hover:bg-[#161A22] transition-colors">
                   <td className="p-2.5 text-[#6B7280] uppercase tracking-wider text-[10px]">{label}</td>
@@ -235,7 +240,7 @@ export const ModelsPapersView: React.FC<ModelsPapersViewProps> = ({
                   <td className="p-3 text-[#9CA3AF] max-w-xs truncate">{mp.key_breakthrough}</td>
                   <td className="p-3 text-[#10B981] font-semibold flex items-center gap-1">
                     <Star className="w-3 h-3 fill-[#10B981]" />
-                    <span>{mp.benchmarks_or_stars}</span>
+                    {benchText(mp) ? <span>{benchText(mp)}</span> : <span className="text-[#4B5563] font-normal">{t.benchmarksPlaceholder}</span>}
                   </td>
                   <td className="p-3">
                     <span className="px-2 py-0.5 bg-[#10B981]/10 text-[#10B981] border border-[#10B981]/30 rounded font-bold">

@@ -341,10 +341,15 @@ async function performRadarScan(): Promise<RadarScanResult> {
       });
 
       // A4: curate high-value approved signals into the models_papers database
-      // so the model/paper library grows with real ingested signals.
+      // so the model/paper library grows with real ingested signals. Only
+      // signals that are genuinely model/paper-related (giants, opensource,
+      // paper) belong in the registry — generic media news is skipped, and no
+      // "Score X" string is fabricated into the benchmark column (the score
+      // already has its own dedicated column in the UI).
       try {
         const highValue = await getSignals({ reviewStatus: 'approved', source_id: source.id, minScore: 85, limit: 3 });
         for (const sig of highValue) {
+          if (!sig.category || !['giants', 'opensource', 'paper'].includes(sig.category)) continue;
           await upsertModelPaper({
             id: `mp-${sig.id}`,
             name: (sig.title_zh || sig.title_raw).slice(0, 60),
@@ -352,7 +357,7 @@ async function performRadarScan(): Promise<RadarScanResult> {
             author_org: sig.source_name,
             release_date: (sig.publish_time || '').slice(0, 10),
             key_breakthrough: (sig.summary_zh || '').slice(0, 120),
-            benchmarks_or_stars: `Score ${sig.radar_score.toFixed(1)}`,
+            benchmarks_or_stars: '',
             url: sig.original_url,
             radar_score: sig.radar_score,
             category: sig.category
