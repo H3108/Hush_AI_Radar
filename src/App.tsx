@@ -182,7 +182,8 @@ export function App() {
   };
 
   // Handle Re-synthesize Brief (daily / weekly / monthly)
-  const handleGenerateBrief = async (type: 'daily' | 'weekly' | 'monthly' = 'daily') => {
+  // Returns an error message (or 'AUTH_REQUIRED' / 'DEGRADED') on failure, null on success.
+  const handleGenerateBrief = async (type: 'daily' | 'weekly' | 'monthly' = 'daily'): Promise<string | null> => {
     setIsGeneratingBrief(true);
     try {
       const adminToken = sessionStorage.getItem('hush_admin_session_token') || '';
@@ -195,16 +196,17 @@ export function App() {
         credentials: 'include',
         body: JSON.stringify({ lang: language, type })
       });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.brief) {
-          if (type === 'weekly') setWeeklyBrief(data.brief);
-          else if (type === 'monthly') setMonthlyBrief(data.brief);
-          else setDailyBrief(data.brief);
-        }
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.brief) {
+        if (type === 'weekly') setWeeklyBrief(data.brief);
+        else if (type === 'monthly') setMonthlyBrief(data.brief);
+        else setDailyBrief(data.brief);
+        return data.brief.degraded ? 'DEGRADED' : null;
       }
-    } catch (err) {
-      console.error('[Hush Radar App] Brief generate error:', err);
+      if (res.status === 401) return 'AUTH_REQUIRED';
+      return data.error || `HTTP ${res.status}`;
+    } catch (err: any) {
+      return err?.message || String(err);
     } finally {
       setIsGeneratingBrief(false);
     }

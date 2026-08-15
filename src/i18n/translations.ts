@@ -93,6 +93,11 @@ export interface Translations {
   generatingBrief: string;
   regenerateBrief: string;
   periodicEmptyHint: string;
+  briefGenerateSuccess: string;
+  briefGenerateError: string;
+  briefGenerateAuthRequired: string;
+  briefGenerateDegraded: string;
+  briefHistoryLoadError: string;
 
   // Models & Papers
   modelsDbTitle: string;
@@ -472,6 +477,11 @@ export const translations: Record<Language, Translations> = {
     readOriginal: '阅读原文',
     generatingBrief: 'AI 生成中...',
     regenerateBrief: '重新生成',
+    briefGenerateSuccess: '简报已重新生成',
+    briefGenerateError: '重新生成失败：{msg}',
+    briefGenerateAuthRequired: '需要管理员权限才能重新生成简报',
+    briefGenerateDegraded: 'AI 合成暂不可用，已生成降级摘要，请检查 Gemini 网络与额度后重试',
+    briefHistoryLoadError: '加载该历史简报失败，请重试',
     periodicEmptyHint: '该周期简报尚未生成，点击「重新生成」或等待定时任务（周报：每周日 23:55 UTC / 月报：每月 1 日 23:55 UTC）自动生成。',
     // Models & Papers
     modelsDbTitle: '模型与重磅论文知识库',
@@ -849,6 +859,11 @@ export const translations: Record<Language, Translations> = {
     readOriginal: 'Read Original',
     generatingBrief: 'Generating...',
     regenerateBrief: 'Regenerate',
+    briefGenerateSuccess: 'Brief regenerated',
+    briefGenerateError: 'Regeneration failed: {msg}',
+    briefGenerateAuthRequired: 'Admin privileges are required to regenerate briefs',
+    briefGenerateDegraded: 'AI synthesis is unavailable; a degraded summary was generated. Check Gemini connectivity/quota and try again',
+    briefHistoryLoadError: 'Failed to load that historical brief, please retry',
     periodicEmptyHint: 'This periodic brief has not been generated yet. Click "Regenerate" or wait for the scheduled task (Weekly: Sun 23:55 UTC / Monthly: 1st 23:55 UTC).',
 
     // Models & Papers

@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Calendar, Check, Clock, Copy, Download, FileText, History, Sparkles, Zap } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Calendar, Check, Clock, Copy, Download, FileText, History, Sparkles, X, Zap } from 'lucide-react';
 import { BriefHistoryItem, DailyBrief } from '../types';
 import { useLanguage } from '../i18n/LanguageContext';
 
@@ -8,7 +8,7 @@ interface InsightsViewProps {
   activeSubTab?: 'daily' | 'weekly' | 'monthly';
   onSubTabChange?: (tab: 'daily' | 'weekly' | 'monthly') => void;
   isGenerating?: boolean;
-  onGenerateBrief?: () => void;
+  onGenerateBrief?: () => Promise<string | null>;
 }
 
 export const InsightsView: React.FC<InsightsViewProps> = ({
@@ -24,6 +24,9 @@ export const InsightsView: React.FC<InsightsViewProps> = ({
   const [history, setHistory] = useState<BriefHistoryItem[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState<string | null>(null);
+  const [generateError, setGenerateError] = useState<string | null>(null);
+  const [generateSuccess, setGenerateSuccess] = useState<string | null>(null);
   const { language, t } = useLanguage();
 
   useEffect(() => {
@@ -36,18 +39,29 @@ export const InsightsView: React.FC<InsightsViewProps> = ({
   }, [brief?.id]);
 
   // Fetch history list for the current tab
-  useEffect(() => {
-    let cancelled = false;
+  const fetchHistory = useCallback(async () => {
     setHistoryLoading(true);
-    fetch(`/api/daily/history?lang=${language}&type=${currentTab}&limit=10`)
-      .then((res) => (res.ok ? res.json() : { items: [] }))
-      .then((data) => { if (!cancelled) setHistory(data.items || []); })
-      .catch(() => { if (!cancelled) setHistory([]); })
-      .finally(() => { if (!cancelled) setHistoryLoading(false); });
-    return () => { cancelled = true; };
+    try {
+      const res = await fetch(`/api/daily/history?lang=${language}&type=${currentTab}&limit=10`);
+      if (res.ok) {
+        const data = await res.json();
+        setHistory(data.items || []);
+      } else {
+        setHistory([]);
+      }
+    } catch {
+      setHistory([]);
+    } finally {
+      setHistoryLoading(false);
+    }
   }, [currentTab, language]);
 
+  useEffect(() => {
+    fetchHistory();
+  }, [fetchHistory]);
+
   const loadBriefById = async (id: string) => {
+    setHistoryError(null);
     try {
       const res = await fetch(`/api/daily/${id}`);
       if (res.ok) {
@@ -55,10 +69,32 @@ export const InsightsView: React.FC<InsightsViewProps> = ({
         if (data && data.id) {
           setViewedBrief(data);
           setShowHistory(false);
+          return;
         }
       }
-    } catch (err) {
-      console.error('[Hush Radar App] brief history fetch error:', err);
+      setHistoryError(t.briefHistoryLoadError);
+    } catch {
+      setHistoryError(t.briefHistoryLoadError);
+    }
+  };
+
+  const handleGenerate = async () => {
+    if (!onGenerateBrief) return;
+    setViewedBrief(null);
+    setGenerateError(null);
+    setGenerateSuccess(null);
+    const result = await onGenerateBrief();
+    if (result === null) {
+      setGenerateSuccess(t.briefGenerateSuccess);
+      fetchHistory();
+      setTimeout(() => setGenerateSuccess(null), 3000);
+    } else if (result === 'AUTH_REQUIRED') {
+      setGenerateError(t.briefGenerateAuthRequired);
+    } else if (result === 'DEGRADED') {
+      setGenerateError(t.briefGenerateDegraded);
+      fetchHistory();
+    } else {
+      setGenerateError(t.briefGenerateError.replace('{msg}', result));
     }
   };
 
@@ -181,7 +217,7 @@ export const InsightsView: React.FC<InsightsViewProps> = ({
           )}
           {onGenerateBrief && (
             <button
-              onClick={() => { setViewedBrief(null); onGenerateBrief(); }}
+              onClick={handleGenerate}
               disabled={isGenerating}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-[#10B981]/15 hover:bg-[#10B981]/25 text-[#10B981] border border-[#10B981]/40 font-mono-code text-xs transition-all cursor-pointer disabled:opacity-50 disabled:cursor-wait"
             >
@@ -192,6 +228,24 @@ export const InsightsView: React.FC<InsightsViewProps> = ({
         </div>
       </div>
 
+      {/* Generate feedback */}
+      {generateError && (
+        <div className="p-3 rounded bg-red-500/10 border border-red-500/40 text-xs font-mono-code text-red-400 flex items-center justify-between gap-3">
+          <span>{generateError}</span>
+          <button onClick={() => setGenerateError(null)} className="hover:text-white cursor-pointer shrink-0" aria-label="dismiss">
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+      {generateSuccess && (
+        <div className="p-3 rounded bg-[#10B981]/10 border border-[#10B981]/40 text-xs font-mono-code text-[#10B981] flex items-center justify-between gap-3">
+          <span>{generateSuccess}</span>
+          <button onClick={() => setGenerateSuccess(null)} className="hover:text-white cursor-pointer shrink-0" aria-label="dismiss">
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
       {/* History Panel */}
       {showHistory && (
         <div className="bg-[#12151B] border border-[#1E232D] rounded p-3 space-y-1.5">
@@ -199,6 +253,11 @@ export const InsightsView: React.FC<InsightsViewProps> = ({
             <span>{t.briefHistory} — {currentTab.toUpperCase()}</span>
             <span className="text-[#3B82F6]">{t.archivedCount.replace('{n}', String(history.length))}</span>
           </div>
+          {historyError && (
+            <div className="p-2.5 rounded bg-red-500/10 border border-red-500/40 text-[11px] font-mono-code text-red-400">
+              {historyError}
+            </div>
+          )}
           {historyLoading ? (
             <div className="p-4 text-center font-mono-code text-xs text-[#9CA3AF]">{t.loadingHistory}</div>
           ) : history.length === 0 ? (

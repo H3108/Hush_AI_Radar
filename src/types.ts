@@ -86,6 +86,7 @@ export interface DailyBrief {
   sections: DailyBriefSection[];
   markdown_content: string;
   generated_at: string;
+  degraded?: boolean;
 }
 
 export interface BriefHistoryItem {

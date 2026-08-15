@@ -285,6 +285,7 @@ export async function synthesizeDailyBrief(signals: Signal[], lang: 'zh-CN' | 'e
       id: `${todayStr}-${lang}`,
       date: todayStr,
       language: lang,
+      degraded: true,
       headline: isEn ? `${todayStr} Global AI Frontiers & Open-Source Breakthroughs` : `${todayStr} 全球 AI 前沿技术与开源生态突破日报`,
       executive_summary: isEn
         ? `Hush AI Radar captured ${signals.length} verified signals today covering LLM milestones, open source systems, and ArXiv papers.`
@@ -377,6 +378,7 @@ export async function synthesizeDailyBrief(signals: Signal[], lang: 'zh-CN' | 'e
       id: `${todayStr}-${lang}`,
       date: todayStr,
       language: lang,
+      degraded: true,
       headline: isEn ? `${todayStr} Global AI Daily Brief` : `${todayStr} 全球 AI 动态简报`,
       executive_summary: isEn ? 'Daily AI intelligence summary.' : '今日全球 AI 情报已成功汇总。',
       sections: [],
@@ -416,7 +418,7 @@ export async function synthesizePeriodicBrief(input: {
     tags: s.tags
   });
 
-  const buildBrief = (headline: string, execSummary: string, md: string, genAt: string): DailyBrief => {
+  const buildBrief = (headline: string, execSummary: string, md: string, genAt: string, degraded = false): DailyBrief => {
     const giants = topSignals.filter(s => s.category === 'giants' || s.category === 'media');
     const openSource = topSignals.filter(s => s.category === 'opensource' || s.category === 'product');
     const papers = topSignals.filter(s => s.category === 'paper');
@@ -461,7 +463,8 @@ export async function synthesizePeriodicBrief(input: {
       fallbackHeadline,
       fallbackExec,
       `# 📡 Hush AI Radar · ${typeLabel} (${periodKey})\n\n> ${rangeLabel}\n\n${fallbackExec}\n`,
-      new Date().toISOString()
+      new Date().toISOString(),
+      true
     );
   }
 
@@ -515,7 +518,7 @@ export async function synthesizePeriodicBrief(input: {
     );
   } catch (err) {
     console.error(`[Hush Radar Gemini] ${period} brief synthesis error after retries:`, err);
-    return buildBrief(fallbackHeadline, fallbackExec, `# 📡 Hush AI Radar · ${typeLabel} (${periodKey})\n\n> ${rangeLabel}\n\n${fallbackExec}`, new Date().toISOString());
+    return buildBrief(fallbackHeadline, fallbackExec, `# 📡 Hush AI Radar · ${typeLabel} (${periodKey})\n\n> ${rangeLabel}\n\n${fallbackExec}`, new Date().toISOString(), true);
   }
 }
 
