@@ -184,8 +184,7 @@ Tasks:
       })
     );
 
-    const text = response.text ? response.text.trim() : '{}';
-    const parsed = JSON.parse(text) as AnalysisResult;
+    const parsed = parseJsonFromText(response.text) as Partial<AnalysisResult>;
 
     return {
       title_zh: parsed.title_zh || titleRaw,

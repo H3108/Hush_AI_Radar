@@ -78,7 +78,7 @@ export const CURATED_SOURCES: Source[] = [
     name: 'Hugging Face Daily Papers',
     category: 'paper',
     url: 'https://huggingface.co/papers',
-    rss_url: 'https://rss.arxiv.org/rss/cs.CL',
+    rss_url: 'https://rss.arxiv.org/rss/cs.LG',
     authority_weight: 4.5,
     last_fetched_at: new Date().toISOString(),
     status: 'active',

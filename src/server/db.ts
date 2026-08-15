@@ -195,6 +195,8 @@ function initSchema(database: Database) {
   database.run(`UPDATE sources SET rss_url = 'https://github.com/run-llama/llama_index/releases.atom' WHERE id = 'llamaindex-blog'`);
   database.run(`UPDATE sources SET rss_url = 'https://github.com/ollama/ollama/releases.atom' WHERE id = 'ollama-blog'`);
   database.run(`UPDATE sources SET rss_url = 'https://www.v2ex.com/index.xml' WHERE id = 'v2ex-ai'`);
+  // Migration: hf-daily-papers duplicated arxiv-cs-cl (both cs.CL); point at cs.LG for distinct ML coverage.
+  database.run(`UPDATE sources SET rss_url = 'https://rss.arxiv.org/rss/cs.LG' WHERE id = 'hf-daily-papers'`);
 }
 
 /**
