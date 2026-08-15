@@ -128,6 +128,11 @@ export function App() {
         if (revRes.ok) {
           const revData = await revRes.json();
           setPendingSignals(revData.pendingSignals || []);
+        } else if (revRes.status === 401) {
+          // Stale in-memory admin session (server restarted): clear it so the
+          // Admin Console shows the login form instead of a silently empty queue.
+          sessionStorage.removeItem('hush_admin_session_token');
+          setPendingSignals([]);
         }
       }
 

@@ -164,6 +164,9 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
         sessionStorage.setItem('hush_admin_session_token', activeSession);
         fetchAdminStatus(activeSession);
         fetchAdminLogs(activeSession);
+        // Reload the review queue (and all global data) so pending items become
+        // visible immediately after login instead of staying empty.
+        if (onRefreshGlobalData) onRefreshGlobalData();
       } else {
         const errData = await res.json().catch(() => ({}));
         setIsAuthenticated(false);
