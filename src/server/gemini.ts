@@ -216,6 +216,31 @@ Tasks:
 /**
  * Synthesizes Daily Brief using Gemini in specified language (zh-CN or en)
  */
+/**
+ * Tolerantly parses JSON out of a Gemini text response. Gemini sometimes wraps
+ * schema JSON in ```json fences or appends prose, which breaks a bare JSON.parse.
+ */
+function parseJsonFromText(text?: string | null): Record<string, any> {
+  if (!text) return {};
+  let raw = text.trim();
+  const fenceMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (fenceMatch) raw = fenceMatch[1].trim();
+  try {
+    return JSON.parse(raw);
+  } catch {
+    const start = raw.indexOf('{');
+    const end = raw.lastIndexOf('}');
+    if (start !== -1 && end > start) {
+      try {
+        return JSON.parse(raw.slice(start, end + 1));
+      } catch {
+        return {};
+      }
+    }
+    return {};
+  }
+}
+
 export async function synthesizeDailyBrief(signals: Signal[], lang: 'zh-CN' | 'en' = 'zh-CN'): Promise<Partial<DailyBrief>> {
   const todayStr = new Date().toISOString().split('T')[0];
   const ai = getGenAI();
@@ -289,7 +314,7 @@ export async function synthesizeDailyBrief(signals: Signal[], lang: 'zh-CN' | 'e
       })
     );
 
-    const parsed = JSON.parse(response.text || '{}');
+    const parsed = parseJsonFromText(response.text);
 
     const giantsItems = topSignals.filter(s => s.category === 'giants' || s.category === 'media');
     const openSourceItems = topSignals.filter(s => s.category === 'opensource' || s.category === 'product');
@@ -455,7 +480,7 @@ export async function synthesizePeriodicBrief(input: {
       })
     );
 
-    const parsed = JSON.parse(response.text || '{}');
+    const parsed = parseJsonFromText(response.text);
     return buildBrief(
       parsed.headline || fallbackHeadline,
       parsed.executive_summary || fallbackExec,

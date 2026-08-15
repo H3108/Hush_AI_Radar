@@ -546,9 +546,13 @@ export async function generatePeriodicBriefIfStale(
     : new Date().toISOString().slice(0, 7);
 
   const latest = await getLatestDailyBrief(lang, period);
-  if (latest && latest.date === periodKey) {
+  const isDegradedStub = !latest || !latest.markdown_content || latest.markdown_content.trim().length < 200;
+  if (latest && latest.date === periodKey && !isDegradedStub) {
     addPipelineLog('info', `[${period} Brief] Skipping: brief for ${periodKey} already exists.`);
     return latest;
+  }
+  if (latest && latest.date === periodKey && isDegradedStub) {
+    addPipelineLog('warn', `[${period} Brief] Existing ${periodKey} brief is a degraded stub; regenerating.`);
   }
 
   const signals = await getSignals({ reviewStatus: 'approved', sinceHours: hours });
@@ -575,9 +579,13 @@ export async function generateDailyBriefIfStale(
   const todayKey = new Date().toISOString().slice(0, 10);
 
   const latest = await getLatestDailyBrief(lang, 'daily');
-  if (latest && latest.date === todayKey) {
+  const isDegradedStub = !latest || !latest.markdown_content || latest.markdown_content.trim().length < 200;
+  if (latest && latest.date === todayKey && !isDegradedStub) {
     addPipelineLog('info', `[Daily Brief] Skipping: brief for ${todayKey} already exists.`);
     return latest;
+  }
+  if (latest && latest.date === todayKey && isDegradedStub) {
+    addPipelineLog('warn', `[Daily Brief] Existing ${todayKey} brief is a degraded stub; regenerating.`);
   }
 
   const signals = await getSignals({ reviewStatus: 'approved' });
