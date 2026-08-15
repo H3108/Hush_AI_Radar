@@ -261,7 +261,7 @@ export function createAdminRouter(): express.Router {
       if (action === 'approve') {
         await updateSignalReviewStatus(id, 'approved', reason);
       } else if (action === 'reject') {
-        await updateSignalReviewStatus(id, 'rejected', reason || 'Rejected during manual Agent Quality Audit.');
+        await updateSignalReviewStatus(id, 'rejected', reason || '管理员人工质量审计时拒绝。');
       } else {
         return res.status(400).json({ error: 'Invalid action. Must be approve or reject.' });
       }

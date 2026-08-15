@@ -120,7 +120,9 @@ export const DashboardVisualizer: React.FC<DashboardVisualizerProps> = ({
 
   const maxSignalsCount = Math.max(...sourceRankings.map((s) => s.total_signals_ingested), 1);
 
-  // Category Activity Breakdown derived from real signals data
+  // Category Activity Breakdown — derived from the FULL approved dataset via
+  // stats.category_counts (not the top-N feed slice), so every category,
+  // including low-volume ones like "新品与应用", always shows up.
   const categoryDefs = [
     { key: 'giants', name: t.techGiants, color: '#10B981' },
     { key: 'opensource', name: t.openSource, color: '#3B82F6' },
@@ -128,11 +130,14 @@ export const DashboardVisualizer: React.FC<DashboardVisualizerProps> = ({
     { key: 'product', name: t.productReleases, color: '#06B6D4' },
     { key: 'media', name: t.techMedia, color: '#A855F7' },
   ] as const;
-  const categoryCounts: Record<string, number> = {};
-  signals.forEach((s) => {
-    const key = categoryDefs.some((c) => c.key === s.category) ? s.category : null;
-    if (key) categoryCounts[key] = (categoryCounts[key] || 0) + 1;
-  });
+  const categoryCounts: Record<string, number> = { ...(stats?.category_counts || {}) };
+  if (Object.keys(categoryCounts).length === 0) {
+    // Fallback for older stats payloads: derive from the signals already in hand.
+    signals.forEach((s) => {
+      const key = categoryDefs.some((c) => c.key === s.category) ? s.category : null;
+      if (key) categoryCounts[key] = (categoryCounts[key] || 0) + 1;
+    });
+  }
   const totalCategorized = categoryDefs.reduce((sum, c) => sum + (categoryCounts[c.key] || 0), 0) || 1;
   const categoryActivity = categoryDefs
     .filter((c) => (categoryCounts[c.key] || 0) > 0)

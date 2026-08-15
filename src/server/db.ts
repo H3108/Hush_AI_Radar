@@ -402,7 +402,7 @@ function seedInitialData(database: Database) {
       },
       confidence_score: 54, // Below 65 -> Goes to Review Queue!
       review_status: 'pending_review',
-      review_reason: 'Agent Classification Confidence (54%) below quality threshold. High marketing claims detected without code verification.',
+      review_reason: 'Agent 分类置信度 (54%) 低于质量阈值，检测到缺少代码验证的过度营销宣传。',
       tags: ['Agent', 'Unverified', 'Coding', 'ReviewQueue'],
       created_at: now
     }
@@ -676,12 +676,24 @@ export async function getSystemStats(): Promise<SystemStats> {
   const lastSyncRes = database.exec('SELECT timestamp FROM sync_logs ORDER BY timestamp DESC LIMIT 1');
   const lastSyncTime = (lastSyncRes[0]?.values[0]?.[0] as string) || new Date().toISOString();
 
+  // Full-dataset category distribution over APPROVED signals. The dashboard's
+  // "分类热度分布" must reflect the whole archive, not the top-N feed slice,
+  // otherwise low-volume categories (e.g. product) silently disappear.
+  const catCountsRes = database.exec(
+    'SELECT category, COUNT(*) c FROM signals WHERE review_status = "approved" GROUP BY category'
+  );
+  const categoryCounts: Record<string, number> = {};
+  for (const row of (catCountsRes[0]?.values || [])) {
+    categoryCounts[String(row[0])] = Number(row[1]);
+  }
+
   return {
     total_signals: totalSignals,
     active_clusters: activeClusters,
     review_queue_count: reviewQueueCount,
     avg_confidence: avgConfidence,
     last_sync_time: lastSyncTime,
+    category_counts: categoryCounts,
     sources_healthy: sourcesHealthy,
     sources_total: sourcesTotal,
     db_type: 'SQLite WASM (Single File Persistent /data/hush_radar.sqlite)'
@@ -839,7 +851,7 @@ export async function insertCluster(c: EventCluster): Promise<void> {
   saveToDisk();
 }
 
-export async function getLatestDailyBrief(lang?: string, type: 'daily' | 'weekly' | 'monthly' = 'daily'): Promise<DailyBrief | null> {
+export async function getLatestDailyBrief(lang?: string, type: 'daily' | 'weekly' | 'monthly' = 'daily', strict = false): Promise<DailyBrief | null> {
   const database = await getDb();
   let sql = 'SELECT * FROM daily_briefs WHERE brief_type = ?';
   const params: any[] = [type];
@@ -850,8 +862,10 @@ export async function getLatestDailyBrief(lang?: string, type: 'daily' | 'weekly
   sql += ' ORDER BY date DESC, generated_at DESC LIMIT 1';
 
   let res = database.exec(sql, params);
-  // Fallback to any brief of this type if requested language brief doesn't exist
-  if ((!res || res.length === 0) && lang) {
+  // Fallback to any brief of this type if requested language brief doesn't exist.
+  // IMPORTANT: generation-time "is it stale?" checks MUST pass strict=true so a
+  // brief in the OTHER language never short-circuits generating this one.
+  if (!strict && (!res || res.length === 0) && lang) {
     res = database.exec('SELECT * FROM daily_briefs WHERE brief_type = ? ORDER BY date DESC, generated_at DESC LIMIT 1', [type]);
   }
 

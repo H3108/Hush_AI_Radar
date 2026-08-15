@@ -57,7 +57,7 @@ export const ConnectView: React.FC<ConnectViewProps> = ({ initialTab = 'rss' }) 
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
     setCopiedSection('skill_download');
     setTimeout(() => setCopiedSection(null), 2000);
   };
@@ -75,8 +75,31 @@ export const ConnectView: React.FC<ConnectViewProps> = ({ initialTab = 'rss' }) 
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
   const rssUrl = `${baseUrl}/rss.xml`;
 
+  const fallbackCopy = (text: string) => {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try {
+      document.execCommand('copy');
+    } catch (err) {
+      console.error('[Connect View] Copy failed:', err);
+    }
+    document.body.removeChild(ta);
+  };
+
   const handleCopy = (text: string, sectionId: string) => {
-    navigator.clipboard.writeText(text);
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).catch(() => fallbackCopy(text));
+      } else {
+        fallbackCopy(text);
+      }
+    } catch {
+      fallbackCopy(text);
+    }
     setCopiedSection(sectionId);
     setTimeout(() => setCopiedSection(null), 2000);
   };

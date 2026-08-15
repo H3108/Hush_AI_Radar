@@ -262,6 +262,7 @@ export interface Translations {
   curatedSourcesTitle: string;
   healthyPctLabel: string;
   colSourceName: string;
+  colSourcesChecked: string;
   colCategory: string;
   colAuthorityWeight: string;
   colSignalsIngested: string;
@@ -353,10 +354,14 @@ export interface Translations {
   adminNoSyncRuns: string;
   adminSyncSuccess: string;
   adminSyncFailed: string;
+  adminSyncSkipped: string;
+  adminSyncResult: string;
   adminBriefSuccess: string;
   adminBriefFailed: string;
   adminPingSuccess: string;
   adminPingFailed: string;
+  adminPingFallback: string;
+  adminNoBrief: string;
   adminQueueTitle: string;
   adminLogsTitle: string;
   adminLogFilterAll: string;
@@ -647,6 +652,7 @@ export const translations: Record<Language, Translations> = {
     curatedSourcesTitle: '精选情报数据源 ({n} 个顶级来源)',
     healthyPctLabel: '{n}% 健康',
     colSourceName: '数据源名称',
+    colSourcesChecked: '数据源数',
     colCategory: '分类',
     colAuthorityWeight: '权威权重',
     colSignalsIngested: '已摄入情报',
@@ -738,10 +744,14 @@ export const translations: Record<Language, Translations> = {
     adminNoSyncRuns: '暂无同步记录。',
     adminSyncSuccess: '✅ 管道扫描完成。',
     adminSyncFailed: '❌ 同步失败。',
+    adminSyncSkipped: '⏭️ 扫描已跳过：另一扫描正在进行中。',
+    adminSyncResult: '✅ 扫描完成：新情报 {new} 条，待审 {pending} 条，聚类更新 {clusters} 个，检查 {sources} 个数据源。',
     adminBriefSuccess: '✅ 已为 {lang} 合成日报。',
     adminBriefFailed: '❌ 日报生成失败。',
     adminPingSuccess: '✅ Gemini API 连接正常。',
     adminPingFailed: '❌ Gemini 连接失败。',
+    adminPingFallback: '⚠️ 回退模式（未配置 Gemini API Key）',
+    adminNoBrief: '未生成',
     adminQueueTitle: '质量审核队列 ({n})',
     adminLogsTitle: '管道执行日志',
     adminLogFilterAll: '全部',
@@ -1031,6 +1041,7 @@ export const translations: Record<Language, Translations> = {
     curatedSourcesTitle: 'CURATED INTELLIGENCE SOURCES ({n} TOP-TIER SOURCES)',
     healthyPctLabel: '{n}% HEALTHY',
     colSourceName: 'SOURCE NAME',
+    colSourcesChecked: 'SOURCES CHECKED',
     colCategory: 'CATEGORY',
     colAuthorityWeight: 'AUTHORITY WEIGHT',
     colSignalsIngested: 'SIGNALS INGESTED',
@@ -1122,10 +1133,14 @@ export const translations: Record<Language, Translations> = {
     adminNoSyncRuns: 'No sync runs recorded yet.',
     adminSyncSuccess: '✅ Pipeline scan complete.',
     adminSyncFailed: '❌ Sync failed.',
+    adminSyncSkipped: '⏭️ Scan skipped: another scan is already running.',
+    adminSyncResult: '✅ Scan complete: {new} new signals, {pending} pending review, {clusters} clusters updated, {sources} sources checked.',
     adminBriefSuccess: '✅ Brief synthesized for {lang}.',
     adminBriefFailed: '❌ Daily brief generation failed.',
     adminPingSuccess: '✅ Gemini API responsive & healthy.',
     adminPingFailed: '❌ Gemini connection failed.',
+    adminPingFallback: '⚠️ Fallback mode (no Gemini API key)',
+    adminNoBrief: 'Not generated',
     adminQueueTitle: 'Quality Control Queue ({n})',
     adminLogsTitle: 'Pipeline Execution Logs',
     adminLogFilterAll: 'ALL',

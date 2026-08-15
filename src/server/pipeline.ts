@@ -115,6 +115,11 @@ export function hashUrl(url: string): string {
 /* B14: semantic (cosine) title deduplication threshold */
 const SEMANTIC_DUP_THRESHOLD = 0.92;
 
+/* Quality gate: Agent confidence below this is auto-dropped (never stored,
+ * never routed to the review queue). Only review_needed signals whose
+ * confidence meets the threshold reach the manual audit queue. */
+const MIN_QUALITY_THRESHOLD = 65;
+
 /**
  * B14: beyond URL-MD5 hashing, embeds the candidate title and compares it
  * against the embeddings of recent approved signals. Signals that already
@@ -214,6 +219,7 @@ async function performRadarScan(): Promise<RadarScanResult> {
   addPipelineLog('info', '[Pipeline Scan] Initiating automated radar scan across curated sources...');
   let newSignalsCount = 0;
   let pendingCount = 0;
+  let droppedCount = 0;
   let sourcesChecked = 0;
   let sourcesFailed = 0;
   const ingestedSignalIds: string[] = [];
@@ -292,10 +298,17 @@ async function performRadarScan(): Promise<RadarScanResult> {
           const analysis = await analyzeRawSignal(rawTitle, rawSnippet, source.name);
           const { totalScore, breakdown } = calculateRadarScore(source.authority_weight, pubTime, analysis.ai_impact_score);
 
-          const isPending = analysis.confidence_score < 65 || analysis.review_needed;
+          // Quality gate: auto-drop low-confidence content instead of storing it.
+          if (analysis.confidence_score < MIN_QUALITY_THRESHOLD) {
+            droppedCount++;
+            addPipelineLog('warn', `[Quality Gate] Dropped low-confidence (${analysis.confidence_score}% < ${MIN_QUALITY_THRESHOLD}%) signal from "${source.name}": ${rawTitle.slice(0, 50)}...`);
+            continue;
+          }
+
+          const isPending = analysis.review_needed;
           const reviewStatus = isPending ? 'pending_review' : 'approved';
           const reviewReason = isPending
-            ? (analysis.review_reason || `Agent Confidence Score (${analysis.confidence_score}%) is below 65% quality threshold.`)
+            ? (analysis.review_reason || `Agent 置信度得分 (${analysis.confidence_score}%) 达标但标记为需人工复核。`)
             : undefined;
 
           if (isPending) pendingCount++;
@@ -379,7 +392,7 @@ async function performRadarScan(): Promise<RadarScanResult> {
     }
   }
 
-  await logSyncRun(sourcesChecked, newSignalsCount, sourcesFailed > 0 ? 'partial' : 'success', `Ingested ${newSignalsCount} new signals, ${pendingCount} routed to review queue, ${sourcesFailed} source(s) failed.`);
+  await logSyncRun(sourcesChecked, newSignalsCount, sourcesFailed > 0 ? 'partial' : 'success', `Ingested ${newSignalsCount} new signals, ${pendingCount} routed to review queue, ${droppedCount} dropped by quality gate, ${sourcesFailed} source(s) failed.`);
 
   // Semantic clustering pass — runs over newly-ingested + recent approved signals
   let clustersUpdated = 0;
@@ -391,7 +404,7 @@ async function performRadarScan(): Promise<RadarScanResult> {
 
   addPipelineLog(
     'success',
-    `[Pipeline Complete] Checked ${sourcesChecked} sources (${sourcesFailed} failed). Ingested ${newSignalsCount} new signals (${pendingCount} queued). Clusters updated: ${clustersUpdated}.`
+    `[Pipeline Complete] Checked ${sourcesChecked} sources (${sourcesFailed} failed). Ingested ${newSignalsCount} new signals (${pendingCount} queued), ${droppedCount} dropped by quality gate. Clusters updated: ${clustersUpdated}.`
   );
   return {
     sourcesChecked,
@@ -399,7 +412,7 @@ async function performRadarScan(): Promise<RadarScanResult> {
     pendingReviewCount: pendingCount,
     clustersUpdated,
     status: sourcesFailed > 0 ? 'partial' : 'success',
-    message: `Radar Scan Completed: Checked ${sourcesChecked} sources. Ingested ${newSignalsCount} new signals (${pendingCount} queued). ${clustersUpdated} clusters refreshed.${sourcesFailed > 0 ? ` ${sourcesFailed} source(s) reported fetch errors.` : ''}`
+    message: `Radar Scan Completed: Checked ${sourcesChecked} sources. Ingested ${newSignalsCount} new signals (${pendingCount} queued), ${droppedCount} dropped by quality gate. ${clustersUpdated} clusters refreshed.${sourcesFailed > 0 ? ` ${sourcesFailed} source(s) reported fetch errors.` : ''}`
   };
 }
 
@@ -574,7 +587,7 @@ export async function generatePeriodicBriefIfStale(
     ? isoWeekKey(new Date())
     : new Date().toISOString().slice(0, 7);
 
-  const latest = await getLatestDailyBrief(lang, period);
+  const latest = await getLatestDailyBrief(lang, period, true);
   const isDegradedStub = !latest || !latest.markdown_content || latest.markdown_content.trim().length < 200;
   if (latest && latest.date === periodKey && !isDegradedStub) {
     addPipelineLog('info', `[${period} Brief] Skipping: brief for ${periodKey} already exists.`);
@@ -607,7 +620,7 @@ export async function generateDailyBriefIfStale(
 ): Promise<DailyBrief | null> {
   const todayKey = new Date().toISOString().slice(0, 10);
 
-  const latest = await getLatestDailyBrief(lang, 'daily');
+  const latest = await getLatestDailyBrief(lang, 'daily', true);
   const isDegradedStub = !latest || !latest.markdown_content || latest.markdown_content.trim().length < 200;
   if (latest && latest.date === todayKey && !isDegradedStub) {
     addPipelineLog('info', `[Daily Brief] Skipping: brief for ${todayKey} already exists.`);

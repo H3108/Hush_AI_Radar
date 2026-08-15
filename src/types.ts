@@ -117,6 +117,7 @@ export interface SystemStats {
   review_queue_count: number;
   avg_confidence: number;
   last_sync_time: string;
+  category_counts?: Record<string, number>;
   sources_healthy: number;
   sources_total: number;
   db_type: string;

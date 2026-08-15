@@ -123,6 +123,16 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
     }
   });
 
+  // Admin sessions are in-memory and die on server restart. On any 401 /
+  // unauthenticated response, purge the stale token so the login form returns
+  // instead of a console that keeps sending a dead session.
+  const clearStaleSession = (message: string) => {
+    sessionStorage.removeItem('hush_admin_session_token');
+    setSessionToken('');
+    setIsAuthenticated(false);
+    setAuthError(message);
+  };
+
   // Check active session on mount or login
   const checkAdminSession = async () => {
     try {
@@ -134,6 +144,11 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
           fetchAdminStatus();
           fetchAdminLogs();
           return true;
+        }
+        // 401-free "not authenticated" response: only flag it when a token was
+        // actually stored, so first-time visitors see a clean login form.
+        if (sessionStorage.getItem('hush_admin_session_token')) {
+          clearStaleSession(t.adminAuthErrorExpired);
         }
       }
     } catch (err) {
@@ -189,8 +204,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
         setStatusData(data);
         setIsAuthenticated(true);
       } else if (res.status === 401) {
-        setIsAuthenticated(false);
-        setAuthError(t.adminAuthErrorExpired);
+        clearStaleSession(t.adminAuthErrorExpired);
       }
     } catch (err) {
       console.error('[Admin Console] Status fetch error:', err);
@@ -261,7 +275,9 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
         body: JSON.stringify({ settings: settingsForm })
       }));
       const data = await res.json().catch(() => ({}));
-      if (res.ok) {
+      if (res.status === 401) {
+        clearStaleSession(t.adminAuthErrorExpired);
+      } else if (res.ok) {
         const s = data.settings || settingsForm;
         setSettingsForm({
           syncIntervalMinutes: s.syncIntervalMinutes || '15',
@@ -323,8 +339,22 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
     try {
       const res = await fetch('/api/admin/sync', getFetchOptions(sessionToken, { method: 'POST' }));
       const data = await res.json().catch(() => ({}));
-      if (res.ok) {
-        setSyncMessage(t.adminSyncSuccess);
+      if (res.status === 401) {
+        clearStaleSession(t.adminAuthErrorExpired);
+      } else if (res.ok) {
+        const r = data || {};
+        const skipped = typeof r.message === 'string' && r.message.includes('skipped');
+        if (skipped) {
+          setSyncMessage(t.adminSyncSkipped);
+        } else {
+          setSyncMessage(
+            t.adminSyncResult
+              .replace('{new}', String(r.newSignalsIngested ?? 0))
+              .replace('{pending}', String(r.pendingReviewCount ?? 0))
+              .replace('{clusters}', String(r.clustersUpdated ?? 0))
+              .replace('{sources}', String(r.sourcesChecked ?? 0))
+          );
+        }
         await fetchAdminStatus();
         await fetchAdminLogs();
         await fetchSyncLogs();
@@ -349,7 +379,9 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
         body: JSON.stringify({ lang: selectedBriefLang })
       }));
       const data = await res.json().catch(() => ({}));
-      if (res.ok && data.brief) {
+      if (res.status === 401) {
+        clearStaleSession(t.adminAuthErrorExpired);
+      } else if (res.ok && data.brief) {
         const langLabel = selectedBriefLang === 'zh-CN' ? '中文' : 'English';
         setBriefMessage(`${t.adminBriefSuccess.replace('{lang}', langLabel)} "${data.brief.headline}"`);
         await fetchAdminStatus();
@@ -372,7 +404,9 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
     try {
       const res = await fetch('/api/admin/gemini-ping', getFetchOptions(sessionToken, { method: 'POST' }));
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
+      if (res.status === 401) {
+        clearStaleSession(t.adminAuthErrorExpired);
+      } else if (!res.ok) {
         setGeminiPingResult({
           status: data.status || 'ERROR',
           latencyMs: 0,
@@ -765,8 +799,14 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                   <span>{isPingingGemini ? t.adminPinging : t.adminPingGemini}</span>
                 </button>
                 {geminiPingResult && (
-                  <span className={`text-[10px] ${geminiPingResult.status === 'ACTIVE' ? 'text-[#10B981]' : 'text-[#EF4444]'}`}>
-                    {geminiPingResult.status === 'ACTIVE' ? t.adminPingSuccess : t.adminPingFailed}
+                  <span className={`text-[10px] ${
+                    geminiPingResult.status === 'ACTIVE' ? 'text-[#10B981]' :
+                    geminiPingResult.status === 'FALLBACK_MODE' ? 'text-[#F59E0B]' :
+                    'text-[#EF4444]'
+                  }`}>
+                    {geminiPingResult.status === 'ACTIVE' ? t.adminPingSuccess :
+                     geminiPingResult.status === 'FALLBACK_MODE' ? t.adminPingFallback :
+                     geminiPingResult.message || t.adminPingFailed}
                   </span>
                 )}
               </div>
@@ -844,7 +884,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
               </div>
               <div className="flex justify-between">
                 <span className="text-[#6B7280]">{t.adminBriefDate}</span>
-                <span className="text-[#9CA3AF]">{summary?.dailyBriefDate || 'Today'}</span>
+                <span className="text-[#9CA3AF]">{summary?.dailyBriefDate || t.adminNoBrief}</span>
               </div>
             </div>
           </div>
@@ -1059,7 +1099,7 @@ export const AdminConsoleView: React.FC<AdminConsoleViewProps> = ({
                 <tr className="border-b border-[#1E232D] text-[#6B7280] uppercase tracking-wider text-[10px]">
                   <th className="py-2 px-3">{t.colTime}</th>
                   <th className="py-2 px-3 text-center">{t.colStatus}</th>
-                  <th className="py-2 px-3 text-center">{t.colSourceName}</th>
+                  <th className="py-2 px-3 text-center">{t.colSourcesChecked}</th>
                   <th className="py-2 px-3 text-center">{t.colNewSignals}</th>
                   <th className="py-2 px-3">{t.colDetails}</th>
                 </tr>

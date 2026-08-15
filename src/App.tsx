@@ -180,6 +180,9 @@ export function App() {
       });
       if (res.ok) {
         await fetchData();
+      } else if (res.status === 401) {
+        sessionStorage.removeItem('hush_admin_session_token');
+        setPendingSignals([]);
       }
     } catch (err) {
       console.error('[Hush Radar App] Review action error:', err);

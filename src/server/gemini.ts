@@ -174,7 +174,7 @@ Tasks:
 4. Write a 2-sentence English summary ("summary_en") focusing on technical innovation and industry impact.
 5. Score the AI Impact ("ai_impact_score", 0-100) based on breakthrough significance.
 6. Score your Agent Confidence ("confidence_score", 0-100) on classification accuracy and source authenticity.
-7. If confidence < 65 or if claims are unverifiable/marketing hype, set "review_needed": true with a short "review_reason".
+7. If confidence < 65 or if claims are unverifiable/marketing hype, set "review_needed": true with a short "review_reason" written in Chinese.
 8. Extract 2 to 4 tech tags ("tags", e.g. ["DeepSeek", "LLM", "OpenSource"]).`;
 
     const response = await withRetry(
