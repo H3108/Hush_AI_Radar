@@ -191,6 +191,10 @@ function initSchema(database: Database) {
   try { database.run(`ALTER TABLE daily_briefs ADD COLUMN language TEXT DEFAULT 'zh-CN';`); } catch (_) {}
   try { database.run(`ALTER TABLE daily_briefs ADD COLUMN brief_type TEXT DEFAULT 'daily';`); } catch (_) {}
   try { database.run(`ALTER TABLE sources ADD COLUMN last_latency_ms INTEGER DEFAULT 0;`); } catch (_) {}
+  // Migration: point dead blog RSS URLs at the projects' GitHub release feeds.
+  database.run(`UPDATE sources SET rss_url = 'https://github.com/run-llama/llama_index/releases.atom' WHERE id = 'llamaindex-blog'`);
+  database.run(`UPDATE sources SET rss_url = 'https://github.com/ollama/ollama/releases.atom' WHERE id = 'ollama-blog'`);
+  database.run(`UPDATE sources SET rss_url = 'https://www.v2ex.com/index.xml' WHERE id = 'v2ex-ai'`);
 }
 
 /**

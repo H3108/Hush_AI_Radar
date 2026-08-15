@@ -28,6 +28,25 @@ const rssParser = new Parser({
   }
 });
 
+/**
+ * Fetches a feed through global fetch (proxy-aware when installProxyAwareFetch
+ * is active) instead of rss-parser's built-in direct HTTP client, so blocked
+ * hosts reachable via HTTP_PROXY are no longer dropped.
+ */
+async function fetchRssFeed(feedUrl: string): Promise<Parser.Output<any>> {
+  const res = await fetch(feedUrl, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Accept': 'application/rss+xml, application/atom+xml, application/xml;q=0.9, */*;q=0.8'
+    },
+    signal: AbortSignal.timeout(8000)
+  });
+  if (!res.ok) {
+    throw new Error(`Status code ${res.status}`);
+  }
+  return rssParser.parseString(await res.text());
+}
+
 export interface PipelineLogEntry {
   id: string;
   timestamp: string;
@@ -210,7 +229,7 @@ async function performRadarScan(): Promise<RadarScanResult> {
 
       addPipelineLog('info', `[RSS Fetch] Checking feed: ${source.name} (${source.category})`);
       const fetchStartedMs = Date.now();
-      const feed = await rssParser.parseURL(source.rss_url);
+      const feed = await fetchRssFeed(source.rss_url);
       const fetchLatencyMs = Date.now() - fetchStartedMs;
       const items = feed.items ? feed.items.slice(0, 5) : [];
 
