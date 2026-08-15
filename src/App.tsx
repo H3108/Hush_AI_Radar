@@ -8,7 +8,6 @@ import { Header } from './components/Header';
 import { ModelsPapersView } from './components/ModelsPapersView';
 import { ActiveTab, SidebarConsole } from './components/SidebarConsole';
 import { SignalFeed } from './components/SignalFeed';
-import { SystemMonitor } from './components/SystemMonitor';
 import { DailyBrief, EventCluster, ModelPaperItem, Signal, Source, SystemStats } from './types';
 import { useLanguage } from './i18n/LanguageContext';
 
@@ -57,7 +56,6 @@ export function App() {
   const [sources, setSources] = useState<Source[]>([]);
 
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [isGeneratingBrief, setIsGeneratingBrief] = useState<boolean>(false);
 
   // Fetch weekly/monthly brief on demand (auto-generates server-side on first hit)
@@ -160,29 +158,6 @@ export function App() {
   const handleSelectCategoryFromVis = (cat: string) => {
     setSelectedCategory(cat);
     setActiveTab('stream');
-  };
-
-  // Handle Manual Radar Scan Pipeline (admin-only; silently ignore unauthenticated)
-  const handleTriggerSync = async () => {
-    setIsSyncing(true);
-    try {
-      const adminToken = sessionStorage.getItem('hush_admin_session_token') || '';
-      const res = await fetch('/api/admin/sync', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(adminToken ? { 'Authorization': `Bearer ${adminToken}` } : {})
-        },
-        credentials: 'include'
-      });
-      if (res.ok) {
-        await fetchData();
-      }
-    } catch (err) {
-      console.error('[Hush Radar App] Sync error:', err);
-    } finally {
-      setIsSyncing(false);
-    }
   };
 
   // Handle Review Queue Action (Approve / Reject)
@@ -346,10 +321,6 @@ export function App() {
 
           {activeTab === 'papers' && (
             <ModelsPapersView items={modelsPapers} isLoading={isLoading} initialTypeFilter="paper" />
-          )}
-
-          {activeTab === 'monitor' && (
-            <SystemMonitor stats={stats} sources={sources} onTriggerSync={handleTriggerSync} isSyncing={isSyncing} />
           )}
 
           {activeTab === 'rss' && <ConnectView initialTab="rss" />}

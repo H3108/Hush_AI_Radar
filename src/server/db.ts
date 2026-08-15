@@ -170,6 +170,12 @@ function initSchema(database: Database) {
       model TEXT NOT NULL,
       created_at TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS system_settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
   `);
 
   // Indexes for query performance
@@ -1220,4 +1226,57 @@ export async function getEmbeddings(signalIds: string[]): Promise<Map<string, nu
     } catch (_) {}
   }
   return out;
+}
+
+/* ============================================================================
+ * SYSTEM SETTINGS (persisted key/value store, admin-configurable)
+ * ========================================================================== */
+
+export const DEFAULT_SETTINGS: Record<string, string> = {
+  syncIntervalMinutes: '15',
+  defaultLanguage: 'zh-CN',
+  autoDailyBrief: 'true',
+  autoPeriodicBrief: 'true'
+};
+
+/**
+ * Read all persisted settings, merged over defaults.
+ */
+export async function getAllSettings(): Promise<Record<string, string>> {
+  const database = await getDb();
+  const settings: Record<string, string> = { ...DEFAULT_SETTINGS };
+  try {
+    const res = database.exec('SELECT key, value FROM system_settings');
+    if (res && res[0]) {
+      for (const row of res[0].values) {
+        settings[String(row[0])] = String(row[1]);
+      }
+    }
+  } catch (_) {}
+  return settings;
+}
+
+/**
+ * Read a single setting value, falling back to the default.
+ */
+export async function getSetting(key: string, fallback?: string): Promise<string> {
+  const settings = await getAllSettings();
+  return settings[key] ?? fallback ?? DEFAULT_SETTINGS[key] ?? '';
+}
+
+/**
+ * Persist one or more settings.
+ */
+export async function setSettings(updates: Record<string, string>): Promise<void> {
+  const database = await getDb();
+  const now = new Date().toISOString();
+  for (const [key, value] of Object.entries(updates)) {
+    if (key in DEFAULT_SETTINGS) {
+      database.run(
+        `INSERT OR REPLACE INTO system_settings (key, value, updated_at) VALUES (?, ?, ?)`,
+        [key, String(value), now]
+      );
+    }
+  }
+  saveToDisk();
 }

@@ -12,7 +12,7 @@ import {
 } from '../db';
 import { GEMINI_MODEL, synthesizeDailyBrief, synthesizePeriodicBrief } from '../gemini';
 import { addPipelineLog } from '../pipeline';
-import { getSyncLogs } from '../db';
+import { getAllSettings, getSyncLogs } from '../db';
 
 /**
  * Public REST endpoints (read-only for unauthenticated users).
@@ -148,7 +148,22 @@ export function createPublicRouter(): express.Router {
     }
   });
 
-  // 6b. Sync history (read-only; drives the "最近同步" & sync telemetry UI)
+  // 6b. Public safe settings (non-secret, client-configurable prefs).
+  router.get('/api/settings/public', async (_req, res) => {
+    try {
+      const all = await getAllSettings();
+      res.json({
+        defaultLanguage: all.defaultLanguage === 'en' ? 'en' : 'zh-CN',
+        syncIntervalMinutes: all.syncIntervalMinutes || '15',
+        autoDailyBrief: all.autoDailyBrief !== 'false',
+        autoPeriodicBrief: all.autoPeriodicBrief !== 'false'
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // 6c. Sync history (read-only; drives the "最近同步" & sync telemetry UI)
   router.get('/api/sync-logs', async (req, res) => {
     try {
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;

@@ -13,7 +13,6 @@ export interface Translations {
   groupInsights: string;
   groupKnowledge: string;
   groupConnect: string;
-  groupSystem: string;
 
   // Sidebar Sub-items
   consoleWorkspace: string;
@@ -27,7 +26,6 @@ export interface Translations {
   navRssFeed: string;
   navOpenApi: string;
   navAgentSkill: string;
-  navSystemMonitor: string;
   navAdminConsole: string;
   engine: string;
   storage: string;
@@ -76,7 +74,6 @@ export interface Translations {
   briefHistory: string;
   noHistory: string;
   briefHeaderFallback: string;
-  triggerManualSync: string;
   queryingDb: string;
   noSignalsFound: string;
 
@@ -118,10 +115,6 @@ export interface Translations {
 
   // Agent Skill
   pythonSnippet: string;
-
-  // Monitor
-  systemMonitorTitle: string;
-  status: string;
 
   // Header / Global Search
   lastSyncFallback: string;
@@ -268,6 +261,122 @@ export interface Translations {
   colSignalsIngested: string;
   colLatency: string;
   colStatus: string;
+  colLastFetched: string;
+  colErrors: string;
+  colRssUrl: string;
+  colTime: string;
+  colNewSignals: string;
+  colDetails: string;
+  never: string;
+
+  // Admin Console
+  adminTitle: string;
+  adminGateSubtitle: string;
+  adminAuthRequired: string;
+  adminTokenLabel: string;
+  adminTokenPlaceholder: string;
+  adminTokenHint: string;
+  adminVerifyButton: string;
+  adminVerifyingButton: string;
+  adminPublicViewOnly: string;
+  adminAuthErrorEmpty: string;
+  adminAuthErrorFailed: string;
+  adminAuthErrorExpired: string;
+  adminAuthErrorConnection: string;
+  adminControlCenter: string;
+  adminAuthenticated: string;
+  adminHeaderDesc: string;
+  adminRefreshStatus: string;
+  adminLockSession: string;
+  adminTabDashboard: string;
+  adminTabMonitor: string;
+  adminTabSync: string;
+  adminTabQueue: string;
+  adminTabLogs: string;
+  adminTabApi: string;
+  adminTabSettings: string;
+  adminTabAll: string;
+  adminCardSystemStatus: string;
+  adminRunning: string;
+  adminProcessUptime: string;
+  adminNodeEnv: string;
+  adminDaemonLoop: string;
+  adminRuntime: string;
+  adminCardSourceHealth: string;
+  adminHealthyCount: string;
+  adminTotalCurated: string;
+  adminActiveFeeds: string;
+  adminDegradedFailing: string;
+  adminOnlinePct: string;
+  adminFetchMode: string;
+  adminTopAuthority: string;
+  adminCardGeminiStatus: string;
+  adminTargetModel: string;
+  adminApiKey: string;
+  adminApiKeyConfigured: string;
+  adminApiKeyFallback: string;
+  adminLatencyTest: string;
+  adminNotTested: string;
+  adminPingGemini: string;
+  adminPinging: string;
+  adminCardQuota: string;
+  adminTodayRequests: string;
+  adminTodayTokens: string;
+  adminInOutTokens: string;
+  adminLast60s: string;
+  adminErrors: string;
+  adminCardLastSync: string;
+  adminLastScanRun: string;
+  adminTotalSignals: string;
+  adminPendingQueue: string;
+  adminBriefDate: string;
+  adminUpdated: string;
+  adminMonitorTitle: string;
+  adminMonitorDesc: string;
+  adminSyncSectionTitle: string;
+  adminManualSyncTitle: string;
+  adminManualSyncDesc: string;
+  adminTriggerSync: string;
+  adminSyncing: string;
+  adminBriefGenTitle: string;
+  adminBriefGenDesc: string;
+  adminTargetLanguage: string;
+  adminSynthesizeBrief: string;
+  adminSynthesizingBrief: string;
+  adminSyncHistoryTitle: string;
+  adminNoSyncRuns: string;
+  adminSyncSuccess: string;
+  adminSyncFailed: string;
+  adminBriefSuccess: string;
+  adminBriefFailed: string;
+  adminPingSuccess: string;
+  adminPingFailed: string;
+  adminQueueTitle: string;
+  adminLogsTitle: string;
+  adminLogFilterAll: string;
+  adminLogFilterGemini: string;
+  adminLogFilterErrors: string;
+  adminRefreshLogs: string;
+  adminNoLogs: string;
+  adminApiTitle: string;
+
+  // Admin Settings
+  adminSettingsTitle: string;
+  adminSettingsDesc: string;
+  adminSettingsSaved: string;
+  adminSettingsSaveFailed: string;
+  adminSettingSyncInterval: string;
+  adminSettingSyncIntervalHint: string;
+  adminSettingDefaultLang: string;
+  adminSettingDefaultLangHint: string;
+  adminSettingAutoDaily: string;
+  adminSettingAutoDailyHint: string;
+  adminSettingAutoPeriodic: string;
+  adminSettingAutoPeriodicHint: string;
+  adminSaveSettings: string;
+  adminSavingSettings: string;
+  adminSettingsLoading: string;
+  adminSettingsError: string;
 }
 
 export const translations: Record<Language, Translations> = {
@@ -284,7 +393,6 @@ export const translations: Record<Language, Translations> = {
     groupInsights: 'INSIGHTS 智能洞察',
     groupKnowledge: 'KNOWLEDGE AI知识库',
     groupConnect: 'CONNECT 开放连接',
-    groupSystem: 'SYSTEM 系统监控',
 
     // Sidebar Sub-items
     consoleWorkspace: 'HUSH AI RADAR',
@@ -298,7 +406,6 @@ export const translations: Record<Language, Translations> = {
     navRssFeed: 'RSS 订阅',
     navOpenApi: '开放 API',
     navAgentSkill: 'Agent Skill 适配',
-    navSystemMonitor: '系统运行监控',
     navAdminConsole: 'Admin Console',
     engine: 'AI 引擎',
     storage: '数据存储',
@@ -347,7 +454,6 @@ export const translations: Record<Language, Translations> = {
     briefHistory: '历史简报',
     noHistory: '暂无历史简报，生成后自动归档',
     briefHeaderFallback: '今日 AI 简报尚未生成',
-    triggerManualSync: '手动同步',
     queryingDb: '正在查询 SQLite 雷达数据库...',
     noSignalsFound: '未找到符合当前筛选条件的 AI 情报。',
 
@@ -388,10 +494,6 @@ export const translations: Record<Language, Translations> = {
 
     // Agent Skill
     pythonSnippet: 'PYTHON SDK 调用示例',
-
-    // Monitor
-    systemMonitorTitle: '系统与数据源巡检监控',
-    status: '运行状态',
 
     // Header / Global Search
     lastSyncFallback: '自动 (15分钟)',
@@ -537,7 +639,123 @@ export const translations: Record<Language, Translations> = {
     colAuthorityWeight: '权威权重',
     colSignalsIngested: '已摄入情报',
     colLatency: '延迟',
-    colStatus: '状态'
+    colStatus: '状态',
+    colLastFetched: '最近抓取',
+    colErrors: '错误数',
+    colRssUrl: 'RSS 地址',
+    colTime: '时间',
+    colNewSignals: '新情报',
+    colDetails: '详情',
+    never: '从未',
+
+    // Admin Console
+    adminTitle: '管理员控制台',
+    adminGateSubtitle: '个人维护与运维遥测终端',
+    adminAuthRequired: '访问管理控制、执行手动雷达扫描、触发 Gemini 日报合成与查看实时系统日志均需身份验证。',
+    adminTokenLabel: 'ADMIN_TOKEN',
+    adminTokenPlaceholder: '请输入服务器 .env 中的 ADMIN_TOKEN',
+    adminTokenHint: '凭证仅存储在您的 .env 文件中，服务端不会提供默认口令。',
+    adminVerifyButton: '验证并解锁',
+    adminVerifyingButton: '正在验证令牌...',
+    adminPublicViewOnly: '普通用户处于公开只读模式',
+    adminAuthErrorEmpty: '请输入 ADMIN_TOKEN。',
+    adminAuthErrorFailed: '身份验证失败，ADMIN_TOKEN 无效。',
+    adminAuthErrorExpired: '会话已过期或未授权。',
+    adminAuthErrorConnection: '连接错误: {msg}',
+    adminControlCenter: '管理员控制台中枢',
+    adminAuthenticated: '已认证',
+    adminHeaderDesc: '个人维护看板 · 守护任务: 每 {interval} 自动扫描',
+    adminRefreshStatus: '刷新状态',
+    adminLockSession: '锁定会话',
+    adminTabDashboard: '看板',
+    adminTabMonitor: '运行监控',
+    adminTabSync: '同步控制',
+    adminTabQueue: '审核队列',
+    adminTabLogs: '运行日志',
+    adminTabApi: 'Agent API',
+    adminTabSettings: '系统设置',
+    adminTabAll: '全视图',
+    adminCardSystemStatus: '系统运行状态',
+    adminRunning: '运行中',
+    adminProcessUptime: '进程运行时长',
+    adminNodeEnv: '运行环境',
+    adminDaemonLoop: '守护循环',
+    adminRuntime: '运行时',
+    adminCardSourceHealth: '数据源健康状态',
+    adminHealthyCount: '{healthy}/{total} 健康',
+    adminTotalCurated: '精选数据源总数',
+    adminActiveFeeds: '{n} 活跃源',
+    adminDegradedFailing: '降级/故障源',
+    adminOnlinePct: '{n}% 在线',
+    adminFetchMode: '抓取模式',
+    adminTopAuthority: '最高权威源',
+    adminCardGeminiStatus: 'Gemini API 状态',
+    adminTargetModel: '目标模型',
+    adminApiKey: 'GEMINI_API_KEY',
+    adminApiKeyConfigured: '已配置 (process.env)',
+    adminApiKeyFallback: '降级模式',
+    adminLatencyTest: '延迟测试',
+    adminNotTested: '未测试',
+    adminPingGemini: '测试 Gemini API',
+    adminPinging: '测试中...',
+    adminCardQuota: 'Gemini 配额用量',
+    adminTodayRequests: '今日请求',
+    adminTodayTokens: '今日 Token',
+    adminInOutTokens: '入/出 Token',
+    adminLast60s: '近 60s 请求',
+    adminErrors: '失败次数',
+    adminCardLastSync: '最近同步',
+    adminLastScanRun: '最近扫描',
+    adminTotalSignals: '总情报量',
+    adminPendingQueue: '待处理队列',
+    adminBriefDate: '日报日期',
+    adminUpdated: '已更新',
+    adminMonitorTitle: '运行监控',
+    adminMonitorDesc: '雷达状态、数据源健康与存储引擎的实时遥测。',
+    adminSyncSectionTitle: '同步与 AI 日报控制',
+    adminManualSyncTitle: '手动同步雷达',
+    adminManualSyncDesc: '立即触发全管道 RSS 抓取（{n} 个源），执行 MD5 去重，并通过 Gemini 进行 AI 影响力打分。',
+    adminTriggerSync: '触发雷达同步扫描',
+    adminSyncing: '正在执行雷达扫描...',
+    adminBriefGenTitle: 'AI 日报生成',
+    adminBriefGenDesc: '调用 {model} 将高影响力信号合成为结构化执行摘要日报。',
+    adminTargetLanguage: '目标语言',
+    adminSynthesizeBrief: '合成日报',
+    adminSynthesizingBrief: '正在合成日报...',
+    adminSyncHistoryTitle: '同步历史',
+    adminNoSyncRuns: '暂无同步记录。',
+    adminSyncSuccess: '✅ 管道扫描完成。',
+    adminSyncFailed: '❌ 同步失败。',
+    adminBriefSuccess: '✅ 已为 {lang} 合成日报。',
+    adminBriefFailed: '❌ 日报生成失败。',
+    adminPingSuccess: '✅ Gemini API 连接正常。',
+    adminPingFailed: '❌ Gemini 连接失败。',
+    adminQueueTitle: '质量审核队列 ({n})',
+    adminLogsTitle: '管道执行日志',
+    adminLogFilterAll: '全部',
+    adminLogFilterGemini: 'GEMINI',
+    adminLogFilterErrors: '错误/警告',
+    adminRefreshLogs: '刷新日志',
+    adminNoLogs: '暂无管道日志。',
+    adminApiTitle: 'Agent 接口与 Skill 部署',
+
+    // Admin Settings
+    adminSettingsTitle: '系统设置',
+    adminSettingsDesc: '配置自动同步间隔、默认语言与自动化任务。',
+    adminSettingsSaved: '✅ 设置已保存。',
+    adminSettingsSaveFailed: '❌ 保存失败。',
+    adminSettingSyncInterval: '自动同步间隔（分钟）',
+    adminSettingSyncIntervalHint: '守护进程将按此间隔自动扫描数据源（1–120 分钟，保存后立即生效）。',
+    adminSettingDefaultLang: '默认界面语言',
+    adminSettingDefaultLangHint: '未手动选择语言时使用的默认语言。',
+    adminSettingAutoDaily: '自动生成每日简报',
+    adminSettingAutoDailyHint: '每天 00:05 (UTC) 自动合成当日精华日报。',
+    adminSettingAutoPeriodic: '自动生成周报/月报',
+    adminSettingAutoPeriodicHint: '周日 23:55 与每月 1 日 23:55 (UTC) 自动合成周期简报。',
+    adminSaveSettings: '保存设置',
+    adminSavingSettings: '保存中...',
+    adminSettingsLoading: '加载中...',
+    adminSettingsError: '加载设置失败。'
   },
   en: {
     // Header
@@ -552,7 +770,6 @@ export const translations: Record<Language, Translations> = {
     groupInsights: 'INSIGHTS',
     groupKnowledge: 'KNOWLEDGE',
     groupConnect: 'CONNECT',
-    groupSystem: 'SYSTEM & MONITORING',
 
     // Sidebar Sub-items
     consoleWorkspace: 'HUSH AI RADAR',
@@ -566,7 +783,6 @@ export const translations: Record<Language, Translations> = {
     navRssFeed: 'RSS Feed',
     navOpenApi: 'Open API',
     navAgentSkill: 'Agent Skill',
-    navSystemMonitor: 'System Monitor',
     navAdminConsole: 'Admin Console',
     engine: 'AI Engine',
     storage: 'Storage',
@@ -615,7 +831,6 @@ export const translations: Record<Language, Translations> = {
     briefHistory: 'Brief History',
     noHistory: 'No historical briefs yet — they auto-archive on generation',
     briefHeaderFallback: 'Today\'s AI brief not generated yet',
-    triggerManualSync: 'Manual Sync',
     queryingDb: 'Querying SQLite Radar Database...',
     noSignalsFound: 'No intelligence signals match current filter criteria.',
 
@@ -657,10 +872,6 @@ export const translations: Record<Language, Translations> = {
 
     // Agent Skill
     pythonSnippet: 'PYTHON SDK CODE SNIPPET',
-
-    // Monitor
-    systemMonitorTitle: 'System & Source Health Monitor',
-    status: 'Status',
 
     // Header / Global Search
     lastSyncFallback: 'Auto (15m)',
@@ -806,7 +1017,123 @@ export const translations: Record<Language, Translations> = {
     colAuthorityWeight: 'AUTHORITY WEIGHT',
     colSignalsIngested: 'SIGNALS INGESTED',
     colLatency: 'LATENCY',
-    colStatus: 'STATUS'
+    colStatus: 'STATUS',
+    colLastFetched: 'LAST FETCHED',
+    colErrors: 'ERRORS',
+    colRssUrl: 'RSS FEED URL',
+    colTime: 'TIME',
+    colNewSignals: 'NEW SIGNALS',
+    colDetails: 'DETAILS',
+    never: 'Never',
+
+    // Admin Console
+    adminTitle: 'ADMIN CONSOLE',
+    adminGateSubtitle: 'Personal Maintenance & Operational Telemetry',
+    adminAuthRequired: 'Authentication required to access administrative controls, execute manual radar scans, trigger Gemini daily brief synthesis, and inspect real-time system logs.',
+    adminTokenLabel: 'ADMIN_TOKEN',
+    adminTokenPlaceholder: 'Enter ADMIN_TOKEN from server .env',
+    adminTokenHint: 'Credentials are stored only in your .env file. The server never provides a default token.',
+    adminVerifyButton: 'AUTHENTICATE & UNLOCK',
+    adminVerifyingButton: 'VERIFYING TOKEN...',
+    adminPublicViewOnly: 'Public View Only Mode Active for Regular Users',
+    adminAuthErrorEmpty: 'Please enter an ADMIN_TOKEN.',
+    adminAuthErrorFailed: 'Authentication failed. Invalid ADMIN_TOKEN.',
+    adminAuthErrorExpired: 'Session expired or unauthorized.',
+    adminAuthErrorConnection: 'Connection error: {msg}',
+    adminControlCenter: 'ADMIN CONSOLE CONTROL CENTER',
+    adminAuthenticated: 'AUTHENTICATED',
+    adminHeaderDesc: 'Personal Maintenance Dashboard · Daemon Task: {interval} Automated Scan Loop',
+    adminRefreshStatus: 'REFRESH STATUS',
+    adminLockSession: 'LOCK SESSION',
+    adminTabDashboard: 'Dashboard',
+    adminTabMonitor: 'Monitor',
+    adminTabSync: 'Sync Control',
+    adminTabQueue: 'Review Queue',
+    adminTabLogs: 'System Logs',
+    adminTabApi: 'Agent API',
+    adminTabSettings: 'Settings',
+    adminTabAll: 'Overview',
+    adminCardSystemStatus: 'System Operation Status',
+    adminRunning: 'RUNNING',
+    adminProcessUptime: 'Process Uptime',
+    adminNodeEnv: 'Node Env',
+    adminDaemonLoop: 'Daemon Loop',
+    adminRuntime: 'Runtime',
+    adminCardSourceHealth: 'Source Health',
+    adminHealthyCount: '{healthy}/{total} HEALTHY',
+    adminTotalCurated: 'Total Curated Sources',
+    adminActiveFeeds: '{n} Active Feeds',
+    adminDegradedFailing: 'Degraded/Failing Sources',
+    adminOnlinePct: '{n}% Online',
+    adminFetchMode: 'Fetch Mode',
+    adminTopAuthority: 'Top Authority',
+    adminCardGeminiStatus: 'Gemini API Status',
+    adminTargetModel: 'Target Model',
+    adminApiKey: 'GEMINI_API_KEY',
+    adminApiKeyConfigured: 'CONFIGURED (process.env)',
+    adminApiKeyFallback: 'FALLBACK MODE',
+    adminLatencyTest: 'Latency Test',
+    adminNotTested: 'Not tested',
+    adminPingGemini: 'PING GEMINI API',
+    adminPinging: 'Pinging...',
+    adminCardQuota: 'Gemini Quota',
+    adminTodayRequests: 'Today Requests',
+    adminTodayTokens: 'Today Tokens',
+    adminInOutTokens: 'Input/Output Tokens',
+    adminLast60s: 'Last 60s Requests',
+    adminErrors: 'Errors',
+    adminCardLastSync: 'Last Sync',
+    adminLastScanRun: 'Last Scan Run',
+    adminTotalSignals: 'Total Signals',
+    adminPendingQueue: 'Pending Queue',
+    adminBriefDate: 'Daily Brief Date',
+    adminUpdated: 'UPDATED',
+    adminMonitorTitle: 'System & Source Health Monitor',
+    adminMonitorDesc: 'Real-time telemetry of radar status, source health, and the storage engine.',
+    adminSyncSectionTitle: 'Sync & Synthesis Controls',
+    adminManualSyncTitle: 'Manual Radar Sync',
+    adminManualSyncDesc: 'Immediately trigger full pipeline RSS ingest across {n} sources, run MD5 dedup, and score AI impact via Gemini.',
+    adminTriggerSync: 'TRIGGER RADAR SYNC SCAN',
+    adminSyncing: 'EXECUTING RADAR SCAN...',
+    adminBriefGenTitle: 'Generate Daily Brief',
+    adminBriefGenDesc: 'Invoke {model} to synthesize high-impact signals into a structured executive brief.',
+    adminTargetLanguage: 'Target Language',
+    adminSynthesizeBrief: 'SYNTHESIZE DAILY BRIEF',
+    adminSynthesizingBrief: 'SYNTHESIZING DAILY BRIEF...',
+    adminSyncHistoryTitle: 'Sync History',
+    adminNoSyncRuns: 'No sync runs recorded yet.',
+    adminSyncSuccess: '✅ Pipeline scan complete.',
+    adminSyncFailed: '❌ Sync failed.',
+    adminBriefSuccess: '✅ Brief synthesized for {lang}.',
+    adminBriefFailed: '❌ Daily brief generation failed.',
+    adminPingSuccess: '✅ Gemini API responsive & healthy.',
+    adminPingFailed: '❌ Gemini connection failed.',
+    adminQueueTitle: 'Quality Control Queue ({n})',
+    adminLogsTitle: 'Pipeline Execution Logs',
+    adminLogFilterAll: 'ALL',
+    adminLogFilterGemini: 'GEMINI',
+    adminLogFilterErrors: 'ERRORS/WARNS',
+    adminRefreshLogs: 'REFRESH LOGS',
+    adminNoLogs: 'No pipeline logs recorded yet.',
+    adminApiTitle: 'Agent API & Skill Deployment',
+
+    // Admin Settings
+    adminSettingsTitle: 'System Settings',
+    adminSettingsDesc: 'Configure the auto-sync interval, default language, and automation tasks.',
+    adminSettingsSaved: '✅ Settings saved.',
+    adminSettingsSaveFailed: '❌ Failed to save settings.',
+    adminSettingSyncInterval: 'Auto Sync Interval (minutes)',
+    adminSettingSyncIntervalHint: 'The daemon rescans sources on this interval (1–120 min, applies live after saving).',
+    adminSettingDefaultLang: 'Default UI Language',
+    adminSettingDefaultLangHint: 'Used when no language preference has been chosen.',
+    adminSettingAutoDaily: 'Auto Generate Daily Brief',
+    adminSettingAutoDailyHint: 'Auto-synthesize the daily brief at 00:05 UTC.',
+    adminSettingAutoPeriodic: 'Auto Generate Weekly/Monthly Briefs',
+    adminSettingAutoPeriodicHint: 'Auto-synthesize periodic briefs at 23:55 UTC on Sundays and the 1st of each month.',
+    adminSaveSettings: 'SAVE SETTINGS',
+    adminSavingSettings: 'SAVING...',
+    adminSettingsLoading: 'Loading...',
+    adminSettingsError: 'Failed to load settings.'
   }
 };
 

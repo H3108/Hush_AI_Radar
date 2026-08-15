@@ -10,6 +10,7 @@ import {
 } from '../db';
 import { GEMINI_MODEL, synthesizeDailyBrief, synthesizePeriodicBrief, getQuotaSnapshot } from '../gemini';
 import { addPipelineLog, executeRadarPipelineScan, getPipelineLogs } from '../pipeline';
+import { getAllSettings, setSettings } from '../db';
 import {
   createAdminSession,
   invalidateSession,
@@ -122,6 +123,8 @@ export function createAdminRouter(): express.Router {
       const pendingSignals = await getSignals({ reviewStatus: 'pending_review' });
       const quota = await getQuotaSnapshot();
       const hasApiKey = !!process.env.GEMINI_API_KEY;
+      const settings = await getAllSettings();
+      const intervalMinutes = settings.syncIntervalMinutes || '15';
 
       res.json({
         authenticated: true,
@@ -130,7 +133,7 @@ export function createAdminRouter(): express.Router {
           uptimeSeconds: Math.floor(process.uptime()),
           nodeEnv: process.env.NODE_ENV || 'development',
           nodeVersion: process.version,
-          daemonInterval: '15 Minutes',
+          daemonInterval: `${intervalMinutes} Minutes`,
           daemonActive: true
         },
         gemini: {
@@ -274,6 +277,39 @@ export function createAdminRouter(): express.Router {
     try {
       const quota = await getQuotaSnapshot();
       res.json({ quota });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  /* --- M. Admin Settings (read/write persisted system settings) --- */
+  router.get('/api/admin/settings', requireAdmin, async (_req, res) => {
+    try {
+      const settings = await getAllSettings();
+      res.json({ settings });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  router.put('/api/admin/settings', requireAdmin, async (req, res) => {
+    try {
+      const body = req.body?.settings || req.body || {};
+      const updates: Record<string, string> = {};
+      if (body.syncIntervalMinutes !== undefined) {
+        const interval = Number(body.syncIntervalMinutes);
+        if (!Number.isFinite(interval) || interval < 1 || interval > 120) {
+          return res.status(400).json({ error: 'syncIntervalMinutes must be a number between 1 and 120.' });
+        }
+        updates.syncIntervalMinutes = String(Math.round(interval));
+      }
+      if (body.defaultLanguage !== undefined) updates.defaultLanguage = body.defaultLanguage === 'en' ? 'en' : 'zh-CN';
+      if (body.autoDailyBrief !== undefined) updates.autoDailyBrief = body.autoDailyBrief ? 'true' : 'false';
+      if (body.autoPeriodicBrief !== undefined) updates.autoPeriodicBrief = body.autoPeriodicBrief ? 'true' : 'false';
+      await setSettings(updates);
+      addPipelineLog('info', '[Admin Settings] Settings updated via Admin Console.');
+      const settings = await getAllSettings();
+      res.json({ success: true, settings });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }

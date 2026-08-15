@@ -24,6 +24,28 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     document.documentElement.lang = language === 'zh-CN' ? 'zh-CN' : 'en';
   }, [language]);
 
+  useEffect(() => {
+    let cancelled = false;
+    const applyServerDefault = async () => {
+      try {
+        const res = await fetch('/api/settings/public');
+        if (!res.ok) return;
+        const data = await res.json();
+        if (cancelled) return;
+        const saved = localStorage.getItem('hush_radar_lang');
+        if (!saved && (data?.defaultLanguage === 'zh-CN' || data?.defaultLanguage === 'en')) {
+          setLanguageState(data.defaultLanguage);
+        }
+      } catch {
+        // silently fall back to the current language
+      }
+    };
+    applyServerDefault();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const value = {
     language,
     setLanguage,
